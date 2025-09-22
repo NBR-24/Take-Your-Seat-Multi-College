@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bookedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "bogieId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "bookedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
