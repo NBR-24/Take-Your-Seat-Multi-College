@@ -18,8 +18,11 @@ import {
   toggleSeatReservation, 
   toggleSeatAvailability,
   cancelBooking,
-  bookSeat
+  bookSeat,
+  initializeAllBogies
 } from '../services/realtimeService';
+import { ref, set, get } from 'firebase/database';
+import { db } from '../config/firebase';
 import { SEAT_STATUS, getSeatTypeDisplay } from '../utils/seatLayout';
 
 const AdminDashboard = ({ onLogout }) => {
@@ -28,6 +31,7 @@ const AdminDashboard = ({ onLogout }) => {
   const [bogieData, setBogieData] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBogie, setSelectedBogie] = useState('all');
+  const [selectedRoute, setSelectedRoute] = useState('all'); // Add route filter
   const [loading, setLoading] = useState(true);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedSeat, setSelectedSeat] = useState(null);
@@ -37,31 +41,68 @@ const AdminDashboard = ({ onLogout }) => {
     phone: ''
   });
 
-  const bogies = ['s3', 's5', 's7'];
+  // All bogies from both routes
+  const allBogies = ['s2', 's3', 's4', 's5', 's6', 's7'];
+  const returnBogies = ['s2', 's3', 's4', 's5', 's6'];
+  const onwardBogies = ['s3', 's5', 's7'];
 
   // Subscribe to bookings and bogie data
   useEffect(() => {
     const unsubscribers = [];
+    let loadedCount = 0;
+    const totalExpected = returnBogies.length + onwardBogies.length + 1; // +1 for bookings
 
-    // Subscribe to bookings
+    const checkAllLoaded = () => {
+      loadedCount++;
+      console.log(`Loaded ${loadedCount}/${totalExpected} data sources`);
+      if (loadedCount >= totalExpected) {
+        setLoading(false);
+      }
+    };
+
+    // Subscribe to bookings from both routes
     const bookingsUnsubscribe = subscribeToAllBookings((bookingsData) => {
+      console.log('Bookings loaded:', bookingsData.length);
       setBookings(bookingsData);
-      setLoading(false);
+      checkAllLoaded();
     });
     unsubscribers.push(bookingsUnsubscribe);
 
-    // Subscribe to bogie data
-    bogies.forEach(bogieId => {
+    // Subscribe to bogie data from both routes
+    // Return route bogies
+    returnBogies.forEach(bogieId => {
       const bogieUnsubscribe = subscribeToBogieData(bogieId, (data) => {
+        console.log(`Return bogie ${bogieId} loaded:`, data.seats?.length || 0, 'seats');
         setBogieData(prev => ({
           ...prev,
-          [bogieId]: data
+          [bogieId]: { ...data, routeId: 'delhi_shornur' }
         }));
-      });
+        checkAllLoaded();
+      }, 'delhi_shornur');
+      unsubscribers.push(bogieUnsubscribe);
+    });
+    
+    // Onward route bogies
+    onwardBogies.forEach(bogieId => {
+      const bogieUnsubscribe = subscribeToBogieData(bogieId, (data) => {
+        console.log(`Onward bogie ${bogieId} loaded:`, data.seats?.length || 0, 'seats');
+        setBogieData(prev => ({
+          ...prev,
+          [`${bogieId}_onward`]: { ...data, routeId: 'shornur_agra', id: bogieId }
+        }));
+        checkAllLoaded();
+      }, 'shornur_agra');
       unsubscribers.push(bogieUnsubscribe);
     });
 
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('Loading timeout reached, forcing load completion');
+      setLoading(false);
+    }, 10000);
+
     return () => {
+      clearTimeout(timeoutId);
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
   }, []);
@@ -71,10 +112,10 @@ const AdminDashboard = ({ onLogout }) => {
     onLogout();
   };
 
-  const handleToggleReservation = async (bogieId, seatId, currentStatus) => {
+  const handleToggleReservation = async (bogieId, seatId, currentStatus, routeId) => {
     try {
       const isReserved = currentStatus === SEAT_STATUS.RESERVED;
-      await toggleSeatReservation(bogieId, seatId, !isReserved);
+      await toggleSeatReservation(bogieId, seatId, !isReserved, routeId);
       
       toast.success(
         `Seat ${isReserved ? 'unreserved' : 'reserved'} successfully!`,
@@ -89,13 +130,13 @@ const AdminDashboard = ({ onLogout }) => {
     }
   };
 
-  const handleCancelBooking = async (bookingId) => {
+  const handleCancelBooking = async (bookingId, routeId) => {
     if (!confirm('Are you sure you want to cancel this booking?')) {
       return;
     }
 
     try {
-      await cancelBooking(bookingId);
+      await cancelBooking(bookingId, routeId);
       toast.success('Booking cancelled successfully!', {
         position: "top-right",
         autoClose: 3000
@@ -110,9 +151,9 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   // Manual booking handlers
-  const handleSeatClick = (seat, bogieId) => {
+  const handleSeatClick = (seat, bogieId, routeId) => {
     if (seat.status === SEAT_STATUS.AVAILABLE) {
-      setSelectedSeat({ ...seat, bogieId });
+      setSelectedSeat({ ...seat, bogieId, routeId });
       setShowBookingModal(true);
     }
   };
@@ -131,7 +172,7 @@ const AdminDashboard = ({ onLogout }) => {
         name: bookingForm.name.trim(),
         email: bookingForm.email.trim().toLowerCase(),
         phone: bookingForm.phone.replace(/\D/g, '')
-      });
+      }, selectedSeat.routeId);
 
       toast.success(`Seat ${selectedSeat.number} booked successfully for ${bookingForm.name}!`, {
         position: "top-right",
@@ -152,9 +193,9 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   // Toggle seat availability handler
-  const handleToggleAvailability = async (bogieId, seatId, currentStatus) => {
+  const handleToggleAvailability = async (bogieId, seatId, currentStatus, routeId) => {
     try {
-      const updatedSeat = await toggleSeatAvailability(bogieId, seatId, currentStatus);
+      const updatedSeat = await toggleSeatAvailability(bogieId, seatId, currentStatus, routeId);
       
       const statusNames = {
         [SEAT_STATUS.AVAILABLE]: 'Available',
@@ -169,6 +210,56 @@ const AdminDashboard = ({ onLogout }) => {
     } catch (error) {
       console.error('Error toggling seat availability:', error);
       toast.error(error.message || 'Failed to update seat status', {
+        position: "top-right",
+        autoClose: 5000
+      });
+    }
+  };
+
+  // Initialize all bogies
+  const handleInitializeAllBogies = async () => {
+    if (!confirm('This will initialize all bogies with fresh seat data. Continue?')) {
+      return;
+    }
+
+    try {
+      console.log('Starting bogie initialization...');
+      await initializeAllBogies();
+      toast.success('All bogies initialized successfully!', {
+        position: "top-right",
+        autoClose: 3000
+      });
+    } catch (error) {
+      console.error('Error initializing bogies:', error);
+      toast.error(`Failed to initialize bogies: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000
+      });
+    }
+  };
+
+  // Test Firebase connection
+  const handleTestFirebase = async () => {
+    try {
+      console.log('Testing Firebase connection...');
+      const testRef = ref(db, 'test');
+      await set(testRef, { timestamp: Date.now(), message: 'Firebase test' });
+      console.log('✅ Firebase write test successful');
+      
+      const snapshot = await get(testRef);
+      if (snapshot.exists()) {
+        console.log('✅ Firebase read test successful:', snapshot.val());
+        toast.success('Firebase connection working!', {
+          position: "top-right",
+          autoClose: 3000
+        });
+      }
+      
+      // Clean up test data
+      await set(testRef, null);
+    } catch (error) {
+      console.error('❌ Firebase test failed:', error);
+      toast.error(`Firebase connection failed: ${error.message}`, {
         position: "top-right",
         autoClose: 5000
       });
@@ -226,8 +317,9 @@ const AdminDashboard = ({ onLogout }) => {
         booking.seatNumber.toString().includes(searchTerm);
       
       const matchesBogie = selectedBogie === 'all' || booking.bogieId === selectedBogie;
+      const matchesRoute = selectedRoute === 'all' || booking.routeId === selectedRoute;
       
-      return matchesSearch && matchesBogie;
+      return matchesSearch && matchesBogie && matchesRoute;
     });
   };
 
@@ -384,17 +476,43 @@ const AdminDashboard = ({ onLogout }) => {
                   </div>
                   
                   <select
+                    value={selectedRoute}
+                    onChange={(e) => setSelectedRoute(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Routes</option>
+                    <option value="delhi_shornur">Delhi to Shornur</option>
+                    <option value="shornur_agra">Shornur to Agra</option>
+                  </select>
+                  
+                  <select
                     value={selectedBogie}
                     onChange={(e) => setSelectedBogie(e.target.value)}
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All Bogies</option>
-                    {bogies.map(bogieId => (
+                    {allBogies.map(bogieId => (
                       <option key={bogieId} value={bogieId}>
                         {bogieId.toUpperCase()}
                       </option>
                     ))}
                   </select>
+                  
+                  <button
+                    onClick={handleTestFirebase}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <RefreshCw size={20} />
+                    Test Firebase
+                  </button>
+                  
+                  <button
+                    onClick={handleInitializeAllBogies}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <RefreshCw size={20} />
+                    Initialize Bogies
+                  </button>
                   
                   <button
                     onClick={exportToCSV}
@@ -455,7 +573,7 @@ const AdminDashboard = ({ onLogout }) => {
                           </td>
                           <td className="py-3 px-4">
                             <button
-                              onClick={() => handleCancelBooking(booking.id)}
+                              onClick={() => handleCancelBooking(booking.id, booking.routeId)}
                               className="flex items-center gap-1 px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
                             >
                               <Trash2 size={16} />
@@ -487,51 +605,105 @@ const AdminDashboard = ({ onLogout }) => {
                   </ul>
                 </div>
                 
-                {bogies.map(bogieId => (
-                  <div key={bogieId} className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      {bogieId.toUpperCase()}
-                    </h3>
-                    
-                    {bogieData[bogieId]?.seats && (
-                      <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-16 gap-2">
-                        {bogieData[bogieId].seats.map(seat => (
-                          <div key={seat.id} className="text-center">
-                            <button
-                              onClick={() => handleSeatClick(seat, bogieId)}
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                if (seat.status !== SEAT_STATUS.BOOKED) {
-                                  handleToggleAvailability(bogieId, seat.id, seat.status);
-                                }
-                              }}
-                              className={`w-8 h-8 rounded text-xs font-semibold transition-colors ${
-                                seat.status === SEAT_STATUS.BOOKED
-                                  ? 'bg-red-100 text-red-800 cursor-not-allowed'
-                                  : seat.status === SEAT_STATUS.RESERVED
-                                  ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
-                                  : seat.status === SEAT_STATUS.UNAVAILABLE
-                                  ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                                  : 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer'
-                              }`}
-                              title={`Seat ${seat.number} - ${
-                                seat.status === SEAT_STATUS.BOOKED 
-                                  ? 'Booked by your group' 
-                                  : seat.status === SEAT_STATUS.RESERVED 
-                                  ? 'Reserved - Right click to cycle status' 
-                                  : seat.status === SEAT_STATUS.UNAVAILABLE
-                                  ? 'Unavailable (occupied by others) - Right click to cycle status'
-                                  : 'Available - Click to book, Right click to cycle status'
-                              }`}
-                            >
-                              {seat.number}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {/* Return Route Bogies */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">Delhi to Shornur Route</h2>
+                  {returnBogies.map(bogieId => (
+                    <div key={bogieId} className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                        {bogieId.toUpperCase()} (Return)
+                      </h3>
+                      
+                      {bogieData[bogieId]?.seats && (
+                        <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-16 gap-2">
+                          {bogieData[bogieId].seats.map(seat => (
+                            <div key={seat.id} className="text-center">
+                              <button
+                                onClick={() => handleSeatClick(seat, bogieId, 'delhi_shornur')}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  if (seat.status !== SEAT_STATUS.BOOKED) {
+                                    handleToggleAvailability(bogieId, seat.id, seat.status, 'delhi_shornur');
+                                  }
+                                }}
+                                className={`w-8 h-8 rounded text-xs font-semibold transition-colors ${
+                                  seat.status === SEAT_STATUS.BOOKED
+                                    ? 'bg-red-100 text-red-800 cursor-not-allowed'
+                                    : seat.status === SEAT_STATUS.RESERVED
+                                    ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
+                                    : seat.status === SEAT_STATUS.UNAVAILABLE
+                                    ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                    : 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer'
+                                }`}
+                                title={`Seat ${seat.number} - ${
+                                  seat.status === SEAT_STATUS.BOOKED 
+                                    ? `Booked by ${seat.bookedBy || 'passenger'}` 
+                                    : seat.status === SEAT_STATUS.RESERVED 
+                                    ? 'Reserved - Right click to cycle status' 
+                                    : seat.status === SEAT_STATUS.UNAVAILABLE
+                                    ? 'Unavailable (occupied by others) - Right click to cycle status'
+                                    : 'Available - Click to book, Right click to cycle status'
+                                }`}
+                              >
+                                {seat.number}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Onward Route Bogies */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-800 mb-4">Shornur to Agra Route</h2>
+                  {onwardBogies.map(bogieId => (
+                    <div key={`${bogieId}_onward`} className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                        {bogieId.toUpperCase()} (Onward)
+                      </h3>
+                      
+                      {bogieData[`${bogieId}_onward`]?.seats && (
+                        <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-16 gap-2">
+                          {bogieData[`${bogieId}_onward`].seats.map(seat => (
+                            <div key={seat.id} className="text-center">
+                              <button
+                                onClick={() => handleSeatClick(seat, bogieId, 'shornur_agra')}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  if (seat.status !== SEAT_STATUS.BOOKED) {
+                                    handleToggleAvailability(bogieId, seat.id, seat.status, 'shornur_agra');
+                                  }
+                                }}
+                                className={`w-8 h-8 rounded text-xs font-semibold transition-colors ${
+                                  seat.status === SEAT_STATUS.BOOKED
+                                    ? 'bg-red-100 text-red-800 cursor-not-allowed'
+                                    : seat.status === SEAT_STATUS.RESERVED
+                                    ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
+                                    : seat.status === SEAT_STATUS.UNAVAILABLE
+                                    ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                                    : 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer'
+                                }`}
+                                title={`Seat ${seat.number} - ${
+                                  seat.status === SEAT_STATUS.BOOKED 
+                                    ? `Booked by ${seat.bookedBy || 'passenger'}` 
+                                    : seat.status === SEAT_STATUS.RESERVED 
+                                    ? 'Reserved - Right click to cycle status' 
+                                    : seat.status === SEAT_STATUS.UNAVAILABLE
+                                    ? 'Unavailable (occupied by others) - Right click to cycle status'
+                                    : 'Available - Click to book, Right click to cycle status'
+                                }`}
+                              >
+                                {seat.number}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

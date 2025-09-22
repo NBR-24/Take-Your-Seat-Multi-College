@@ -13,36 +13,86 @@ import {
 } from 'firebase/database';
 import { db } from '../config/firebase';
 import { generateSeatLayout, generateSleeperSeatLayout, SEAT_STATUS } from '../utils/seatLayout';
+import { ROUTES } from '../utils/routeConfig';
+
+// Helper functions for route-based database paths
+const getBogiePath = (routeId, bogieId) => {
+  const routeSuffix = routeId === 'delhi_shornur' ? 'return' : 'onward';
+  return `${routeSuffix}_bogies/${bogieId}`;
+};
+
+const getBookingsPath = (routeId) => {
+  const routeSuffix = routeId === 'delhi_shornur' ? 'return' : 'onward';
+  return `${routeSuffix}_bookings`;
+};
+
+const getRouteFromBogieId = (bogieId) => {
+  // Determine route based on bogie ID
+  const returnBogies = ROUTES.DELHI_TO_SHORNUR.bogies;
+  const onwardBogies = ROUTES.SHORNUR_TO_AGRA.bogies;
+  
+  if (returnBogies.includes(bogieId)) {
+    return 'delhi_shornur';
+  } else if (onwardBogies.includes(bogieId)) {
+    return 'shornur_agra';
+  }
+  
+  // Default fallback
+  return 'shornur_agra';
+};
 
 // Initialize bogie data if it doesn't exist
-export const initializeBogieData = async (bogieId) => {
+export const initializeBogieData = async (bogieId, routeId = null) => {
   try {
-    const bogieRef = ref(db, `bogies/${bogieId}`);
-    const seats = generateSleeperSeatLayout(); // Use sleeper layout
+    // Determine route if not provided
+    if (!routeId) {
+      routeId = getRouteFromBogieId(bogieId);
+    }
     
-    const bogieData = {
-      id: bogieId,
-      name: bogieId.toUpperCase(),
-      seats: seats,
-      totalSeats: 80, // 80 seats for sleeper coach (10 compartments × 8 seats)
-      bookedSeats: 0,
-      reservedSeats: 0,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+    const bogiePath = getBogiePath(routeId, bogieId);
+    console.log(`Initializing bogie ${bogieId} at path: ${bogiePath}`);
     
-    await set(bogieRef, bogieData);
-    return seats;
+    const bogieRef = ref(db, bogiePath);
+    const snapshot = await get(bogieRef);
+    
+    if (!snapshot.exists()) {
+      console.log(`Creating new bogie ${bogieId} for route ${routeId}`);
+      const seats = generateSleeperSeatLayout(); // Use sleeper layout
+      const bogieData = {
+        id: bogieId,
+        name: bogieId.toUpperCase(),
+        seats: seats,
+        totalSeats: 80,
+        bookedSeats: 0,
+        reservedSeats: 0,
+        routeId: routeId,
+        layoutVersion: 'sleeper_v3',
+        createdAt: Date.now()
+      };
+      
+      await set(bogieRef, bogieData);
+      console.log(`✅ Successfully initialized bogie ${bogieId} for route ${routeId} with 80 seats`);
+      return seats;
+    } else {
+      console.log(`Bogie ${bogieId} already exists for route ${routeId}`);
+      return snapshot.val().seats;
+    }
   } catch (error) {
-    console.error('Error initializing bogie data:', error);
+    console.error(`❌ Error initializing bogie ${bogieId} for route ${routeId}:`, error);
+    console.error('Error details:', error.message);
     throw error;
   }
 };
 
 // Force reset bogie data to new sleeper layout (use this to migrate from old layout)
-export const resetBogieToSleeperLayout = async (bogieId) => {
+export const resetBogieToSleeperLayout = async (bogieId, routeId = null) => {
   try {
-    const bogieRef = ref(db, `bogies/${bogieId}`);
+    // Determine route if not provided
+    if (!routeId) {
+      routeId = getRouteFromBogieId(bogieId);
+    }
+    
+    const bogieRef = ref(db, getBogiePath(routeId, bogieId));
     
     // Delete existing data first
     await set(bogieRef, null);
@@ -50,7 +100,7 @@ export const resetBogieToSleeperLayout = async (bogieId) => {
     // Initialize with new sleeper layout
     const seats = generateSleeperSeatLayout();
     
-    console.log(`Generated ${seats.length} seats for ${bogieId}`);
+    console.log(`Generated ${seats.length} seats for ${bogieId} on route ${routeId}`);
     console.log('First few seats:', seats.slice(0, 8).map(s => `${s.number}:${s.type}`));
     
     const bogieData = {
@@ -60,13 +110,14 @@ export const resetBogieToSleeperLayout = async (bogieId) => {
       totalSeats: 80,
       bookedSeats: 0,
       reservedSeats: 0,
+      routeId: routeId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       layoutVersion: 'sleeper_v3' // Updated version marker
     };
     
     await set(bogieRef, bogieData);
-    console.log(`Reset ${bogieId} to new sleeper layout with 80 seats`);
+    console.log(`Reset ${bogieId} to new sleeper layout with 80 seats on route ${routeId}`);
     return seats;
   } catch (error) {
     console.error('Error resetting bogie data:', error);
@@ -76,25 +127,67 @@ export const resetBogieToSleeperLayout = async (bogieId) => {
 
 // Force reset all bogies to new layout (for debugging)
 export const resetAllBogiesToSleeperLayout = async () => {
-  const bogies = ['s3', 's5', 's7'];
-  for (const bogieId of bogies) {
-    await resetBogieToSleeperLayout(bogieId);
+  // Reset return route bogies
+  const returnBogies = ['s2', 's3', 's4', 's5', 's6'];
+  for (const bogieId of returnBogies) {
+    await resetBogieToSleeperLayout(bogieId, 'delhi_shornur');
   }
-  console.log('All bogies reset to new 80-seat sleeper layout');
+  
+  // Reset onward route bogies
+  const onwardBogies = ['s3', 's5', 's7'];
+  for (const bogieId of onwardBogies) {
+    await resetBogieToSleeperLayout(bogieId, 'shornur_agra');
+  }
+  
+  console.log('All bogies reset to new 80-seat sleeper layout for both routes');
+};
+
+// Initialize all bogies for both routes (call this once to set up the database)
+export const initializeAllBogies = async () => {
+  console.log('Initializing all bogies for both routes...');
+  
+  try {
+    // Initialize return route bogies
+    const returnBogies = ['s2', 's3', 's4', 's5', 's6'];
+    for (const bogieId of returnBogies) {
+      console.log(`Initializing return bogie ${bogieId}`);
+      await initializeBogieData(bogieId, 'delhi_shornur');
+    }
+    
+    // Initialize onward route bogies
+    const onwardBogies = ['s3', 's5', 's7'];
+    for (const bogieId of onwardBogies) {
+      console.log(`Initializing onward bogie ${bogieId}`);
+      await initializeBogieData(bogieId, 'shornur_agra');
+    }
+    
+    console.log('All bogies initialized successfully!');
+  } catch (error) {
+    console.error('Error initializing bogies:', error);
+  }
 };
 
 // Get bogie data with real-time updates
-export const subscribeToBogieData = (bogieId, callback) => {
-  const bogieRef = ref(db, `bogies/${bogieId}`);
+export const subscribeToBogieData = (bogieId, callback, routeId = null) => {
+  // Determine route if not provided
+  if (!routeId) {
+    routeId = getRouteFromBogieId(bogieId);
+  }
+  
+  const bogiePath = getBogiePath(routeId, bogieId);
+  console.log(`Subscribing to bogie ${bogieId} at path: ${bogiePath}`);
+  const bogieRef = ref(db, bogiePath);
   
   const unsubscribe = onValue(bogieRef, async (snapshot) => {
+    console.log(`Bogie ${bogieId} snapshot exists:`, snapshot.exists());
     if (snapshot.exists()) {
       const data = snapshot.val();
+      console.log(`Bogie ${bogieId} data:`, data);
       
       // Check if we need to migrate to new sleeper layout with correct berth pattern
       if (!data.layoutVersion || data.layoutVersion !== 'sleeper_v3') {
         console.log(`Migrating ${bogieId} from old layout to new sleeper layout...`);
-        const seats = await resetBogieToSleeperLayout(bogieId);
+        const seats = await resetBogieToSleeperLayout(bogieId, routeId);
         callback({
           id: bogieId,
           name: bogieId.toUpperCase(),
@@ -102,34 +195,37 @@ export const subscribeToBogieData = (bogieId, callback) => {
           totalSeats: 80,
           bookedSeats: 0,
           reservedSeats: 0,
+          routeId: routeId,
           layoutVersion: 'sleeper_v3'
         });
       } else {
         callback(data);
       }
     } else {
+      console.log(`Initializing bogie ${bogieId} for route ${routeId}`);
       // Initialize bogie if it doesn't exist
-      const seats = await initializeBogieData(bogieId);
+      const seats = await initializeBogieData(bogieId, routeId);
       callback({
         id: bogieId,
         name: bogieId.toUpperCase(),
         seats: seats,
         totalSeats: 80, // 80 seats for sleeper coach
         bookedSeats: 0,
-        reservedSeats: 0
+        reservedSeats: 0,
+        routeId: routeId
       });
     }
   }, (error) => {
-    console.error('Error subscribing to bogie data:', error);
+    console.error(`Error subscribing to bogie ${bogieId} data:`, error);
   });
 
   return () => off(bogieRef, 'value', unsubscribe);
 };
 
-// Check if email/phone is already used
-export const checkUserExists = async (email, phone) => {
+// Check if email/phone is already used for a specific route
+export const checkUserExists = async (email, phone, routeId) => {
   try {
-    const bookingsRef = ref(db, 'bookings');
+    const bookingsRef = ref(db, getBookingsPath(routeId));
     const snapshot = await get(bookingsRef);
     
     if (!snapshot.exists()) {
@@ -151,15 +247,23 @@ export const checkUserExists = async (email, phone) => {
 };
 
 // Book a seat with transaction for atomicity
-export const bookSeat = async (bogieId, seatId, userDetails) => {
+export const bookSeat = async (bogieId, seatId, userDetails, routeId = null) => {
   try {
+    // Determine route if not provided
+    if (!routeId && userDetails.route) {
+      routeId = userDetails.route.id;
+    }
+    if (!routeId) {
+      routeId = getRouteFromBogieId(bogieId);
+    }
+    
     // Check if user already has a booking BEFORE the transaction
-    const userCheck = await checkUserExists(userDetails.email, userDetails.phone);
+    const userCheck = await checkUserExists(userDetails.email, userDetails.phone, routeId);
     if (userCheck.emailExists || userCheck.phoneExists) {
-      throw new Error('User already has a booking');
+      throw new Error('User already has a booking for this route');
     }
 
-    const bogieRef = ref(db, `bogies/${bogieId}`);
+    const bogieRef = ref(db, getBogiePath(routeId, bogieId));
     
     return new Promise((resolve, reject) => {
       runTransaction(bogieRef, (currentData) => {
@@ -190,7 +294,7 @@ export const bookSeat = async (bogieId, seatId, userDetails) => {
         currentData.bookedSeats = (currentData.bookedSeats || 0) + 1;
         currentData.updatedAt = Date.now();
         
-        console.log(`Booking seat ${seatId} for ${userDetails.name} - Status: ${SEAT_STATUS.BOOKED}`);
+        console.log(`Booking seat ${seatId} for ${userDetails.name} on route ${routeId} - Status: ${SEAT_STATUS.BOOKED}`);
         
         return currentData;
       }).then(async (result) => {
@@ -205,15 +309,16 @@ export const bookSeat = async (bogieId, seatId, userDetails) => {
             email: userDetails.email,
             phone: userDetails.phone,
             route: userDetails.route || null,
+            routeId: routeId,
             bookedAt: Date.now(),
             status: 'confirmed'
           };
           
-          const bookingsRef = ref(db, 'bookings');
+          const bookingsRef = ref(db, getBookingsPath(routeId));
           const newBookingRef = push(bookingsRef);
           await set(newBookingRef, { ...bookingData, id: newBookingRef.key });
           
-          console.log(`Booking completed successfully for seat ${seatId}`);
+          console.log(`Booking completed successfully for seat ${seatId} on route ${routeId}`);
           resolve({ ...bookingData, id: newBookingRef.key });
         } else {
           reject(new Error('Transaction failed'));
@@ -227,7 +332,7 @@ export const bookSeat = async (bogieId, seatId, userDetails) => {
 };
 
 // Cancel a booking (admin function)
-export const cancelBooking = async (bookingId) => {
+export const cancelBooking = async (bookingId, routeId = null) => {
   // Check if user is authenticated as admin
   const isAdminAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
   if (!isAdminAuthenticated) {
@@ -235,15 +340,35 @@ export const cancelBooking = async (bookingId) => {
   }
   
   try {
-    const bookingRef = ref(db, `bookings/${bookingId}`);
-    const bookingSnapshot = await get(bookingRef);
+    // If routeId not provided, try both routes
+    let bookingRef, booking;
     
-    if (!bookingSnapshot.exists()) {
+    if (routeId) {
+      bookingRef = ref(db, `${getBookingsPath(routeId)}/${bookingId}`);
+      const bookingSnapshot = await get(bookingRef);
+      if (bookingSnapshot.exists()) {
+        booking = bookingSnapshot.val();
+      }
+    } else {
+      // Try both routes
+      const routes = ['delhi_shornur', 'shornur_agra'];
+      for (const route of routes) {
+        const testRef = ref(db, `${getBookingsPath(route)}/${bookingId}`);
+        const testSnapshot = await get(testRef);
+        if (testSnapshot.exists()) {
+          bookingRef = testRef;
+          booking = testSnapshot.val();
+          routeId = route;
+          break;
+        }
+      }
+    }
+    
+    if (!booking) {
       throw new Error('Booking not found');
     }
     
-    const booking = bookingSnapshot.val();
-    const bogieRef = ref(db, `bogies/${booking.bogieId}`);
+    const bogieRef = ref(db, getBogiePath(routeId, booking.bogieId));
     
     return new Promise((resolve, reject) => {
       runTransaction(bogieRef, (currentData) => {
@@ -282,9 +407,14 @@ export const cancelBooking = async (bookingId) => {
 };
 
 // Toggle seat availability (admin function)
-export const toggleSeatAvailability = async (bogieId, seatId, currentStatus) => {
+export const toggleSeatAvailability = async (bogieId, seatId, currentStatus, routeId = null) => {
   try {
-    const bogieRef = ref(db, `bogies/${bogieId}`);
+    // Determine route if not provided
+    if (!routeId) {
+      routeId = getRouteFromBogieId(bogieId);
+    }
+    
+    const bogieRef = ref(db, getBogiePath(routeId, bogieId));
     
     return new Promise((resolve, reject) => {
       runTransaction(bogieRef, (currentData) => {
@@ -348,7 +478,7 @@ export const toggleSeatAvailability = async (bogieId, seatId, currentStatus) => 
 };
 
 // Reserve/unreserve seat (admin function)
-export const toggleSeatReservation = async (bogieId, seatId, isReserved) => {
+export const toggleSeatReservation = async (bogieId, seatId, isReserved, routeId = null) => {
   // Check if user is authenticated as admin
   const isAdminAuthenticated = localStorage.getItem('adminAuthenticated') === 'true';
   if (!isAdminAuthenticated) {
@@ -356,7 +486,12 @@ export const toggleSeatReservation = async (bogieId, seatId, isReserved) => {
   }
   
   try {
-    const bogieRef = ref(db, `bogies/${bogieId}`);
+    // Determine route if not provided
+    if (!routeId) {
+      routeId = getRouteFromBogieId(bogieId);
+    }
+    
+    const bogieRef = ref(db, getBogiePath(routeId, bogieId));
     
     return new Promise((resolve, reject) => {
       runTransaction(bogieRef, (currentData) => {
@@ -409,39 +544,129 @@ export const toggleSeatReservation = async (bogieId, seatId, isReserved) => {
   }
 };
 
-// Get all bookings for admin
-export const getAllBookings = async () => {
+// Get all bookings for admin (from both routes)
+export const getAllBookings = async (routeId = null) => {
   try {
-    const bookingsRef = ref(db, 'bookings');
-    const snapshot = await get(bookingsRef);
-    
-    if (!snapshot.exists()) {
-      return [];
+    if (routeId) {
+      // Get bookings for specific route
+      const bookingsRef = ref(db, getBookingsPath(routeId));
+      const snapshot = await get(bookingsRef);
+      
+      if (!snapshot.exists()) {
+        return [];
+      }
+      
+      const bookings = snapshot.val();
+      return Object.values(bookings).sort((a, b) => b.bookedAt - a.bookedAt);
+    } else {
+      // Get bookings from both routes
+      const allBookings = [];
+      const routes = ['delhi_shornur', 'shornur_agra'];
+      
+      for (const route of routes) {
+        const bookingsRef = ref(db, getBookingsPath(route));
+        const snapshot = await get(bookingsRef);
+        
+        if (snapshot.exists()) {
+          const bookings = snapshot.val();
+          const bookingsWithRoute = Object.values(bookings).map(booking => ({
+            ...booking,
+            routeId: route
+          }));
+          allBookings.push(...bookingsWithRoute);
+        }
+      }
+      
+      return allBookings.sort((a, b) => b.bookedAt - a.bookedAt);
     }
-    
-    const bookings = snapshot.val();
-    return Object.values(bookings).sort((a, b) => b.bookedAt - a.bookedAt);
   } catch (error) {
     console.error('Error getting all bookings:', error);
     throw error;
   }
 };
 
-// Subscribe to all bookings for admin
-export const subscribeToAllBookings = (callback) => {
-  const bookingsRef = ref(db, 'bookings');
+// Subscribe to all bookings for admin (from both routes)
+export const subscribeToAllBookings = (callback, routeId = null) => {
+  console.log('Subscribing to bookings, routeId:', routeId);
   
-  const unsubscribe = onValue(bookingsRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const bookings = snapshot.val();
-      const bookingsList = Object.values(bookings).sort((a, b) => b.bookedAt - a.bookedAt);
-      callback(bookingsList);
-    } else {
-      callback([]);
-    }
-  }, (error) => {
-    console.error('Error subscribing to bookings:', error);
-  });
+  if (routeId) {
+    // Subscribe to specific route
+    const bookingsPath = getBookingsPath(routeId);
+    console.log(`Subscribing to bookings at path: ${bookingsPath}`);
+    const bookingsRef = ref(db, bookingsPath);
+    
+    const unsubscribe = onValue(bookingsRef, (snapshot) => {
+      console.log(`Bookings snapshot exists for ${routeId}:`, snapshot.exists());
+      if (snapshot.exists()) {
+        const bookings = snapshot.val();
+        const bookingsList = Object.values(bookings).sort((a, b) => b.bookedAt - a.bookedAt);
+        console.log(`Found ${bookingsList.length} bookings for ${routeId}`);
+        callback(bookingsList);
+      } else {
+        console.log(`No bookings found for ${routeId}`);
+        callback([]);
+      }
+    }, (error) => {
+      console.error(`Error subscribing to ${routeId} bookings:`, error);
+    });
 
-  return () => off(bookingsRef, 'value', unsubscribe);
+    return () => off(bookingsRef, 'value', unsubscribe);
+  } else {
+    // Subscribe to both routes
+    const unsubscribers = [];
+    const allBookings = { delhi_shornur: [], shornur_agra: [] };
+    
+    const updateCallback = () => {
+      const combined = [...allBookings.delhi_shornur, ...allBookings.shornur_agra]
+        .sort((a, b) => b.bookedAt - a.bookedAt);
+      console.log(`Total combined bookings: ${combined.length}`);
+      callback(combined);
+    };
+    
+    // Subscribe to return route bookings
+    const returnPath = getBookingsPath('delhi_shornur');
+    console.log(`Subscribing to return bookings at: ${returnPath}`);
+    const returnRef = ref(db, returnPath);
+    const returnUnsubscribe = onValue(returnRef, (snapshot) => {
+      console.log('Return bookings snapshot exists:', snapshot.exists());
+      if (snapshot.exists()) {
+        const bookings = snapshot.val();
+        allBookings.delhi_shornur = Object.values(bookings).map(booking => ({
+          ...booking,
+          routeId: 'delhi_shornur'
+        }));
+        console.log(`Return bookings: ${allBookings.delhi_shornur.length}`);
+      } else {
+        allBookings.delhi_shornur = [];
+        console.log('No return bookings found');
+      }
+      updateCallback();
+    });
+    unsubscribers.push(() => off(returnRef, 'value', returnUnsubscribe));
+    
+    // Subscribe to onward route bookings
+    const onwardPath = getBookingsPath('shornur_agra');
+    console.log(`Subscribing to onward bookings at: ${onwardPath}`);
+    const onwardRef = ref(db, onwardPath);
+    const onwardUnsubscribe = onValue(onwardRef, (snapshot) => {
+      console.log('Onward bookings snapshot exists:', snapshot.exists());
+      if (snapshot.exists()) {
+        const bookings = snapshot.val();
+        allBookings.shornur_agra = Object.values(bookings).map(booking => ({
+          ...booking,
+          routeId: 'shornur_agra'
+        }));
+        console.log(`Onward bookings: ${allBookings.shornur_agra.length}`);
+      } else {
+        allBookings.shornur_agra = [];
+        console.log('No onward bookings found');
+      }
+      updateCallback();
+    });
+    unsubscribers.push(() => off(onwardRef, 'value', onwardUnsubscribe));
+    
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }
 };

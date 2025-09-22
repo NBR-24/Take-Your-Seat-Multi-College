@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "return_bogies": {
+      ".read": true,
+      ".write": true
+    },
+    "onward_bogies": {
+      ".read": true,
+      ".write": true
+    },
+    "return_bookings": {
+      ".read": true,
+      ".write": true
+    },
+    "onward_bookings": {
+      ".read": true,
+      ".write": true
+    },
+    "test": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

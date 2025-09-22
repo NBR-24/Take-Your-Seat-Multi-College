@@ -64,7 +64,7 @@ const BookingPage = () => {
         }));
         
         setLoading(false);
-      });
+      }, selectedRoute?.id); // Pass routeId
       
       unsubscribers.push(unsubscribe);
     });
@@ -72,7 +72,7 @@ const BookingPage = () => {
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
-  }, [bogies]);
+  }, [bogies, selectedRoute?.id]);
 
   const handleRouteChange = (route) => {
     setSelectedRoute(route);
@@ -120,7 +120,7 @@ const BookingPage = () => {
         route: selectedRoute
       };
       
-      await bookSeat(activeBogieId, selectedSeat.id, bookingDetails);
+      await bookSeat(activeBogieId, selectedSeat.id, bookingDetails, selectedRoute.id);
       
       toast.success(`Seat ${selectedSeat.number} booked successfully!`, {
         position: "top-right",
@@ -138,7 +138,7 @@ const BookingPage = () => {
       
       let errorMessage = 'Failed to book seat. Please try again.';
       if (error.message.includes('already has a booking')) {
-        errorMessage = 'You already have a booking. Each person can book only one seat.';
+        errorMessage = 'You already have a booking for this route. Each person can book only one seat per route.';
       } else if (error.message.includes('not available')) {
         errorMessage = 'This seat is no longer available. Please select another seat.';
       }
@@ -230,13 +230,14 @@ const BookingPage = () => {
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="font-semibold text-blue-800 mb-3">How to Book:</h3>
           <ol className="list-decimal list-inside space-y-2 text-blue-700">
-            <li>Select your preferred bogie (S1, S2, or S3)</li>
+            <li>Select your preferred route (Shornur to Agra or Delhi to Shornur)</li>
+            <li>Select your preferred bogie from available options</li>
             <li>Click on an available (green) seat</li>
             <li>Fill in your details in the booking form</li>
             <li>Confirm your booking</li>
           </ol>
           <p className="mt-4 text-sm text-blue-600">
-            <strong>Note:</strong> Each person can book only one seat. Your email and phone number must be unique across all bookings.
+            <strong>Note:</strong> Each person can book only one seat per route. Your email and phone number must be unique for each route.
           </p>
         </div>
       </div>
