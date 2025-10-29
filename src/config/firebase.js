@@ -2,25 +2,24 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getDatabase } from 'firebase/database';
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase configuration using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyABd5eH2rlEav6dFDsazfJW6nUBPHHrQYM",
-  authDomain: "take-your-seat-af5a7.firebaseapp.com",
-  databaseURL: "https://take-your-seat-af5a7-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "take-your-seat-af5a7",
-  storageBucket: "take-your-seat-af5a7.firebasestorage.app",
-  messagingSenderId: "557510709545",
-  appId: "1:557510709545:web:f24040af7f1c733f77a738",
-  measurementId: "G-X71RQQ6DWM"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Initialize Analytics only in production
+const analytics = import.meta.env.PROD ? getAnalytics(app) : null;
 
 // Initialize Realtime Database
 export const db = getDatabase(app);
