@@ -1,0 +1,65 @@
+{
+  "rules": {
+    "colleges": {
+      "$collegeId": {
+        ".read": true,
+        ".write": true,
+        
+        "routes": {
+          "$routeId": {
+            "bogies": {
+              "$bogieId": {
+                ".read": true,
+                ".write": true
+              }
+            },
+            "bookings": {
+              ".read": true,
+              "$bookingId": {
+                ".write": true
+              }
+            }
+          }
+        },
+        
+        "settings": {
+          ".read": true,
+          ".write": true
+        }
+      }
+    },
+    
+    "return_bogies": {
+      ".read": true,
+      "$bogieId": {
+        ".write": "auth != null"
+      }
+    },
+    
+    "onward_bogies": {
+      ".read": true,
+      "$bogieId": {
+        ".write": "auth != null"
+      }
+    },
+    
+    "return_bookings": {
+      ".read": true,
+      "$bookingId": {
+        ".write": "!data.exists() || auth != null"
+      }
+    },
+    
+    "onward_bookings": {
+      ".read": true,
+      "$bookingId": {
+        ".write": "!data.exists() || auth != null"
+      }
+    },
+    
+    "test": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
