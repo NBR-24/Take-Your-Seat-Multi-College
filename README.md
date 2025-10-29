@@ -1,6 +1,16 @@
-# Take Your Seat - Train Booking Platform
+# 🚂 Take Your Seat - Multi-College Train Booking Platform
 
-A comprehensive industrial-visit train ticket booking platform built with React, Firebase Firestore, and TailwindCSS. Features real-time seat booking, admin management, and mobile-responsive design.
+A modern, scalable train ticket booking platform designed for educational institutions' industrial visits. Each college can create their own isolated booking system with a unique college code, complete with real-time seat management and admin controls.
+
+## ✨ **What's New - Multi-College Support!**
+
+Transform from a single-college platform to a **multi-tenant SaaS solution**:
+- 🏫 **Unlimited Colleges** - Any institution can create their own booking system
+- 🔐 **Complete Data Isolation** - Each college's data is completely separate
+- 🎨 **Custom Branding** - College logos and names
+- 🔑 **Unique College Codes** - 6-digit codes for easy access
+- ⚙️ **Flexible Configuration** - Customizable routes, bogies, and seat counts
+- 🎛️ **Advanced Seat Management** - Admins can mark seats as Available/Reserved/Unavailable
 
 ## 🚀 Features
 
@@ -23,18 +33,27 @@ A comprehensive industrial-visit train ticket booking platform built with React,
 - **Real-time Updates**: Instant seat status changes across all browsers
 
 ### Admin Panel
-- **Password Protection**: Secure admin authentication
+- **Password Protection**: Per-college admin authentication
 - **Booking Management**: View, search, filter, and cancel bookings
-- **Seat Reservations**: Reserve/unreserve seats for faculty
+- **Seat Management Tab**: Visual grid to toggle seat status (Available/Reserved/Unavailable)
 - **CSV Export**: Download booking data for external use
 - **Real-time Dashboard**: Live statistics and booking updates
+- **Multi-Route Support**: Manage multiple routes from single dashboard
+
+### College Setup
+- **3-Step Wizard**: Easy college onboarding process
+- **Custom Configuration**: Set bogies, seats per bogie, and routes
+- **Unique Code Generation**: Automatic 6-digit college code
+- **Logo Support**: Optional college logo upload
+- **Multiple Routes**: Support for multiple train routes per college
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 18 + Vite
 - **Styling**: TailwindCSS
-- **Database**: Firebase Firestore
+- **Database**: Firebase Realtime Database
 - **Hosting**: Firebase Hosting (ready to deploy)
 - **Icons**: Lucide React
 - **Notifications**: React Toastify
 - **Routing**: React Router DOM
+- **State Management**: React Context API
