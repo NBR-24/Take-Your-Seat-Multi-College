@@ -42,3 +42,7 @@ public/build/
 # Temporary files
 *.tmp
 *.temp
+
+# Documentation to ignore
+ARCHITECTURE.md
+GITHUB_PUSH_INSTRUCTIONS.md
