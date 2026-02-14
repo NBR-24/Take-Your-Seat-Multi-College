@@ -51,7 +51,7 @@ Built for managing seat allocation in:
 
 ## 🚀 Concept
 
-Take Your Seat focuses on simplicity, visual clarity, and real-time consistency — replacing error-prone forms and manual seat coordination with an intuitive booking interface.
+Take Your Seat focuses on simplicity, visual clarity, and real-time consistency , replacing error-prone forms and manual seat coordination with an intuitive booking interface.
 
 ---
 
