@@ -1,6 +1,15 @@
-import { ref, set, get, push } from 'firebase/database';
+import { ref, set, get, push, update } from 'firebase/database';
 import { db } from '../config/firebase';
 import { generateSleeperSeatLayout } from '../utils/seatLayout';
+
+// Hash password using SHA-256 (Web Crypto API — zero dependencies)
+const hashPassword = async (password) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 // Generate a unique college code (6-character alphanumeric)
 export const generateCollegeCode = () => {
@@ -48,16 +57,19 @@ export const generateUniqueCollegeCode = async () => {
 export const createCollege = async (collegeData) => {
   try {
     const { name, bogies, seatsPerBogie, routes, adminPassword, logoUrl } = collegeData;
-    
+
     // Generate unique college code
     const collegeCode = await generateUniqueCollegeCode();
-    
+
     // Create college document
+    // Hash the admin password before storing
+    const adminPasswordHash = await hashPassword(adminPassword);
+
     const college = {
       id: collegeCode,
       name,
       logoUrl: logoUrl || null,
-      adminPassword, // In production, this should be hashed
+      adminPasswordHash,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       settings: {
@@ -66,10 +78,10 @@ export const createCollege = async (collegeData) => {
         routes: routes || []
       }
     };
-    
+
     const collegeRef = ref(db, `colleges/${collegeCode}`);
     await set(collegeRef, college);
-    
+
     // Initialize bogies for each route
     if (routes && routes.length > 0) {
       for (const route of routes) {
@@ -78,7 +90,7 @@ export const createCollege = async (collegeData) => {
         }
       }
     }
-    
+
     console.log(`✅ College created successfully with code: ${collegeCode}`);
     return { collegeCode, college };
   } catch (error) {
@@ -93,7 +105,7 @@ export const initializeCollegeBogieData = async (collegeId, routeId, bogieId, se
     const bogiePath = `colleges/${collegeId}/routes/${routeId}/bogies/${bogieId}`;
     const bogieRef = ref(db, bogiePath);
     const snapshot = await get(bogieRef);
-    
+
     if (!snapshot.exists()) {
       const seats = generateSleeperSeatLayout(seatsPerBogie);
       const bogieData = {
@@ -106,7 +118,7 @@ export const initializeCollegeBogieData = async (collegeId, routeId, bogieId, se
         layoutVersion: 'sleeper_v3',
         createdAt: Date.now()
       };
-      
+
       await set(bogieRef, bogieData);
       console.log(`✅ Initialized bogie ${bogieId} for college ${collegeId}, route ${routeId}`);
       return seats;
@@ -125,7 +137,7 @@ export const getCollegeByCode = async (collegeCode) => {
   try {
     const collegeRef = ref(db, `colleges/${collegeCode}`);
     const snapshot = await get(collegeRef);
-    
+
     if (snapshot.exists()) {
       return snapshot.val();
     } else {
@@ -145,7 +157,7 @@ export const updateCollegeSettings = async (collegeId, settings) => {
       ...settings,
       updatedAt: Date.now()
     });
-    
+
     console.log(`✅ College settings updated for ${collegeId}`);
     return true;
   } catch (error) {
@@ -159,28 +171,28 @@ export const addRouteToCollege = async (collegeId, routeData) => {
   try {
     const college = await getCollegeByCode(collegeId);
     const routes = college.settings.routes || [];
-    
+
     // Check if route already exists
     const routeExists = routes.some(r => r.id === routeData.id);
     if (routeExists) {
       throw new Error('Route already exists');
     }
-    
+
     routes.push(routeData);
-    
+
     await updateCollegeSettings(collegeId, {
       ...college.settings,
       routes
     });
-    
+
     // Initialize bogies for this route
     const bogies = college.settings.bogies || [];
     const seatsPerBogie = college.settings.seatsPerBogie || 80;
-    
+
     for (const bogieId of bogies) {
       await initializeCollegeBogieData(collegeId, routeData.id, bogieId, seatsPerBogie);
     }
-    
+
     console.log(`✅ Route ${routeData.id} added to college ${collegeId}`);
     return true;
   } catch (error) {
@@ -194,27 +206,27 @@ export const addBogieToCollege = async (collegeId, bogieId) => {
   try {
     const college = await getCollegeByCode(collegeId);
     const bogies = college.settings.bogies || [];
-    
+
     // Check if bogie already exists
     if (bogies.includes(bogieId)) {
       throw new Error('Bogie already exists');
     }
-    
+
     bogies.push(bogieId);
-    
+
     await updateCollegeSettings(collegeId, {
       ...college.settings,
       bogies
     });
-    
+
     // Initialize this bogie for all routes
     const routes = college.settings.routes || [];
     const seatsPerBogie = college.settings.seatsPerBogie || 80;
-    
+
     for (const route of routes) {
       await initializeCollegeBogieData(collegeId, route.id, bogieId, seatsPerBogie);
     }
-    
+
     console.log(`✅ Bogie ${bogieId} added to college ${collegeId}`);
     return true;
   } catch (error) {
@@ -223,11 +235,29 @@ export const addBogieToCollege = async (collegeId, bogieId) => {
   }
 };
 
-// Verify admin password
+// Verify admin password (supports both hashed and legacy plaintext)
 export const verifyCollegeAdmin = async (collegeId, password) => {
   try {
     const college = await getCollegeByCode(collegeId);
-    return college.adminPassword === password;
+    const inputHash = await hashPassword(password);
+
+    // Check hashed password first (new format)
+    if (college.adminPasswordHash) {
+      return college.adminPasswordHash === inputHash;
+    }
+
+    // Fallback: legacy plaintext password — migrate to hash on successful login
+    if (college.adminPassword === password) {
+      // Migrate: replace plaintext with hash
+      const collegeRef = ref(db, `colleges/${collegeId}`);
+      await update(collegeRef, {
+        adminPasswordHash: inputHash,
+        adminPassword: null // Remove plaintext
+      });
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error('Error verifying admin:', error);
     return false;

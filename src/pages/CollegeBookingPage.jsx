@@ -5,6 +5,8 @@ import { Settings, ArrowLeft } from 'lucide-react';
 import BogieSelector from '../components/BogieSelector';
 import SleeperSeatMap from '../components/SleeperSeatMap';
 import BookingModal from '../components/BookingModal';
+import ThemeToggle from '../components/ThemeToggle';
+import { useTheme } from '../contexts/ThemeContext';
 import { subscribeToCollegeBogieData, bookCollegeSeat } from '../services/multiCollegeService';
 import { getCollegeByCode } from '../services/collegeService';
 import { SEAT_STATUS } from '../utils/seatLayout';
@@ -13,7 +15,8 @@ import 'react-toastify/dist/ReactToastify.css';
 const CollegeBookingPage = () => {
   const { collegeId } = useParams();
   const navigate = useNavigate();
-  
+  const { isDark } = useTheme();
+
   const [college, setCollege] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [activeBogieId, setActiveBogieId] = useState(null);
@@ -25,19 +28,21 @@ const CollegeBookingPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load college data
+
+  const bg = isDark ? 'bg-dark-700' : 'bg-gray-50';
+  const headerBg = isDark ? 'bg-dark-500 border-dark-200' : 'bg-white border-gray-200';
+  const heading = isDark ? 'text-white' : 'text-gray-900';
+  const subtext = isDark ? 'text-gray-400' : 'text-gray-600';
+  const cardBg = isDark ? 'glass-card' : 'bg-white rounded-2xl shadow-lg border border-gray-200';
+  const footerBg = isDark ? 'bg-dark-500 border-dark-200' : 'bg-white border-gray-200';
+
   useEffect(() => {
     const loadCollege = async () => {
       try {
         setLoading(true);
         const collegeData = await getCollegeByCode(collegeId);
         setCollege(collegeData);
-        
-        // Set first route as default
-        if (collegeData.settings?.routes?.length > 0) {
-          setSelectedRoute(collegeData.settings.routes[0]);
-        }
-        
+        if (collegeData.settings?.routes?.length > 0) setSelectedRoute(collegeData.settings.routes[0]);
         setError(null);
       } catch (err) {
         console.error('Error loading college:', err);
@@ -46,168 +51,68 @@ const CollegeBookingPage = () => {
         setLoading(false);
       }
     };
-
-    if (collegeId) {
-      loadCollege();
-    }
+    if (collegeId) loadCollege();
   }, [collegeId]);
 
-  // Subscribe to bogie data when route changes
   useEffect(() => {
-    if (!college || !selectedRoute) {
-      return;
-    }
-
+    if (!college || !selectedRoute) return;
     const bogies = college.settings.bogies || [];
-    
-    if (bogies.length === 0) {
-      return;
-    }
-
-    // Set first bogie as active if none selected
-    if (!activeBogieId && bogies.length > 0) {
-      setActiveBogieId(bogies[0]);
-    }
+    if (bogies.length === 0) return;
+    if (!activeBogieId && bogies.length > 0) setActiveBogieId(bogies[0]);
 
     const unsubscribers = [];
-    
     bogies.forEach(bogieId => {
-      const unsubscribe = subscribeToCollegeBogieData(
-        collegeId,
-        selectedRoute.id,
-        bogieId,
-        (data) => {
-          if (data) {
-            setBogieData(prev => ({
-              ...prev,
-              [bogieId]: data
-            }));
-            
-            // Update stats
-            const totalSeats = data.totalSeats || 80;
-            const bookedSeats = data.bookedSeats || 0;
-            const reservedSeats = data.reservedSeats || 0;
-            const unavailableSeats = data.seats ? data.seats.filter(seat => seat.status === 'unavailable').length : 0;
-            const availableSeats = data.seats ? data.seats.filter(seat => seat.status === 'available').length : (totalSeats - bookedSeats - reservedSeats - unavailableSeats);
-            
-            setBogieStats(prev => ({
-              ...prev,
-              [bogieId]: {
-                totalSeats,
-                bookedSeats,
-                reservedSeats,
-                unavailableSeats,
-                availableSeats
-              }
-            }));
-          }
+      const unsubscribe = subscribeToCollegeBogieData(collegeId, selectedRoute.id, bogieId, (data) => {
+        if (data) {
+          setBogieData(prev => ({ ...prev, [bogieId]: data }));
+          const totalSeats = data.totalSeats || 80;
+          const bookedSeats = data.bookedSeats || 0;
+          const reservedSeats = data.reservedSeats || 0;
+          const unavailableSeats = data.seats ? data.seats.filter(s => s.status === 'unavailable').length : 0;
+          const availableSeats = data.seats ? data.seats.filter(s => s.status === 'available').length : (totalSeats - bookedSeats - reservedSeats - unavailableSeats);
+          setBogieStats(prev => ({ ...prev, [bogieId]: { totalSeats, bookedSeats, reservedSeats, unavailableSeats, availableSeats } }));
         }
-      );
-      
+      });
       unsubscribers.push(unsubscribe);
     });
-    
-    return () => {
-      unsubscribers.forEach(unsubscribe => unsubscribe());
-    };
+    return () => unsubscribers.forEach(u => u());
   }, [college, selectedRoute, collegeId]);
 
   const handleRouteChange = (route) => {
     setSelectedRoute(route);
-    // Reset active bogie when route changes
-    if (college?.settings?.bogies?.length > 0) {
-      setActiveBogieId(college.settings.bogies[0]);
-    } else {
-      setActiveBogieId(null);
-    }
-    // Clear previous data
-    setBogieData({});
-    setBogieStats({});
-    setSelectedSeat(null);
+    if (college?.settings?.bogies?.length > 0) setActiveBogieId(college.settings.bogies[0]);
+    else setActiveBogieId(null);
+    setBogieData({}); setBogieStats({}); setSelectedSeat(null);
   };
-
-  const handleBogieChange = (bogieId) => {
-    setActiveBogieId(bogieId);
-    setSelectedSeat(null);
-  };
-
+  const handleBogieChange = (bogieId) => { setActiveBogieId(bogieId); setSelectedSeat(null); };
   const handleSeatClick = (seat) => {
-    if (!selectedRoute) {
-      toast.warning('Please select a route first!', {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      return;
-    }
-    
-    if (seat.status === SEAT_STATUS.AVAILABLE) {
-      setSelectedSeat(seat);
-      setIsBookingModalOpen(true);
-    }
+    if (!selectedRoute) { toast.warning('Please select a route first!'); return; }
+    if (seat.status === SEAT_STATUS.AVAILABLE) { setSelectedSeat(seat); setIsBookingModalOpen(true); }
   };
-
   const handleConfirmBooking = async (userDetails) => {
     if (!selectedSeat || !selectedRoute) return;
-    
     setIsBookingLoading(true);
-    
     try {
-      const bookingDetails = {
-        ...userDetails,
-        route: selectedRoute
-      };
-      
-      await bookCollegeSeat(
-        collegeId,
-        selectedRoute.id,
-        activeBogieId,
-        selectedSeat.id,
-        bookingDetails
-      );
-      
-      toast.success(`Seat ${selectedSeat.number} booked successfully!`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
-      
-      setIsBookingModalOpen(false);
-      setSelectedSeat(null);
+      await bookCollegeSeat(collegeId, selectedRoute.id, activeBogieId, selectedSeat.id, { ...userDetails, route: selectedRoute });
+      toast.success(`Seat ${selectedSeat.number} booked successfully!`);
+      setIsBookingModalOpen(false); setSelectedSeat(null);
     } catch (error) {
-      console.error('Booking failed:', error);
-      
-      let errorMessage = 'Failed to book seat. Please try again.';
-      if (error.message.includes('already has a booking')) {
-        errorMessage = 'You already have a booking for this route. Each person can book only one seat per route.';
-      } else if (error.message.includes('not available')) {
-        errorMessage = 'This seat is no longer available. Please select another seat.';
-      }
-      
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 7000,
-      });
+      let msg = 'Failed to book seat. Please try again.';
+      if (error.message.includes('already has a booking')) msg = 'You already have a booking for this route.';
+      else if (error.message.includes('not available')) msg = 'This seat is no longer available.';
+      toast.error(msg);
     } finally {
       setIsBookingLoading(false);
     }
   };
-
-  const handleCloseModal = () => {
-    if (!isBookingLoading) {
-      setIsBookingModalOpen(false);
-      setSelectedSeat(null);
-    }
-  };
-
-  const handleAdminClick = () => {
-    navigate(`/college/${collegeId}/admin`);
-  };
+  const handleCloseModal = () => { if (!isBookingLoading) { setIsBookingModalOpen(false); setSelectedSeat(null); } };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen ${bg} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading college information...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent mx-auto mb-4"></div>
+          <p className={subtext}>Loading college information...</p>
         </div>
       </div>
     );
@@ -215,20 +120,12 @@ const CollegeBookingPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className={`min-h-screen ${bg} flex items-center justify-center p-4`}>
         <div className="text-center max-w-md">
-          <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">❌</span>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">College Not Found</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
-          >
-            <ArrowLeft size={20} />
-            Back to Home
-          </button>
+          <div className="bg-red-500/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4"><span className="text-3xl">❌</span></div>
+          <h2 className={`text-2xl font-bold ${heading} mb-2`}>College Not Found</h2>
+          <p className={`${subtext} mb-6`}>{error}</p>
+          <button onClick={() => navigate('/')} className="px-6 py-3 bg-accent text-dark-700 font-bold rounded-xl hover:bg-accent-light transition-all flex items-center gap-2 mx-auto"><ArrowLeft size={20} />Back to Home</button>
         </div>
       </div>
     );
@@ -240,133 +137,87 @@ const CollegeBookingPage = () => {
   const routes = college?.settings?.routes || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
+    <div className={`min-h-screen ${bg}`}>
+      <div className={`${headerBg} border-b sticky top-0 z-40`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
               {college?.logoUrl ? (
-                <img src={college.logoUrl} alt={college.name} className="h-10 w-10 object-contain" />
+                <img src={college.logoUrl} alt={college.name} className="h-10 w-10 object-contain rounded-lg" />
               ) : (
-                <div className="bg-blue-600 text-white rounded-lg p-2">
-                  🚂
-                </div>
+                <div className="bg-accent/20 text-accent rounded-xl p-2">🚂</div>
               )}
               <div>
-                <h1 className="text-lg font-bold text-gray-800">{college?.name}</h1>
-                <p className="text-xs text-gray-600">Code: {collegeId}</p>
+                <h1 className={`text-lg font-bold ${heading}`}>{college?.name}</h1>
+                <p className={`text-xs ${subtext}`}>Code: <span className="text-accent font-mono">{collegeId}</span></p>
               </div>
             </div>
-            
-            <button
-              onClick={handleAdminClick}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Admin Panel"
-            >
-              <Settings size={20} />
-              <span className="hidden sm:inline">Admin</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                onClick={() => navigate(`/college/${collegeId}/admin`)}
+                className={`flex items-center gap-2 px-3 py-2 border rounded-xl transition-all ${isDark ? 'text-gray-400 hover:text-accent border-dark-200 hover:border-accent/30' : 'text-gray-600 hover:text-accent border-gray-300 hover:border-accent/30'}`}
+                title="Admin Panel"
+              >
+                <Settings size={20} />
+                <span className="hidden sm:inline">Admin</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        {/* Title */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">
-            Book Your Seat
-          </h2>
-          <p className="text-gray-600 text-lg">
-            Industrial Visit Train Ticket Booking
-          </p>
+          <h2 className={`text-3xl sm:text-4xl font-bold ${heading} mb-2`}>Book Your <span className="text-accent">Seat</span></h2>
+          <p className={`${subtext} text-lg`}>Industrial Visit Train Ticket Booking</p>
         </div>
 
-        {/* Route Selector */}
         {routes.length > 1 && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Route
-            </label>
+            <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Select Route</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {routes.map(route => (
-                <button
-                  key={route.id}
-                  onClick={() => handleRouteChange(route)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedRoute?.id === route.id
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  <h3 className="font-semibold text-gray-800">{route.name}</h3>
-                  <p className="text-sm text-gray-600">{route.from} → {route.to}</p>
-                  {route.trainNumber && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {route.trainNumber} - {route.trainName}
-                    </p>
-                  )}
+                <button key={route.id} onClick={() => handleRouteChange(route)}
+                  className={`p-4 rounded-xl border-2 transition-all ${selectedRoute?.id === route.id
+                    ? 'border-accent bg-accent/10'
+                    : isDark ? 'border-dark-200 hover:border-accent/30 bg-dark-500' : 'border-gray-200 hover:border-accent/30 bg-white'
+                    }`}>
+                  <h3 className={`font-semibold ${heading}`}>{route.name}</h3>
+                  <p className={`text-sm ${subtext}`}>{route.from} → {route.to}</p>
+                  {route.trainNumber && <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>{route.trainNumber} - {route.trainName}</p>}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Bogie Selector */}
-        {selectedRoute && bogies.length > 0 && (
-          <BogieSelector
-            bogies={bogies}
-            activeBogieId={activeBogieId}
-            onBogieChange={handleBogieChange}
-            bogieStats={bogieStats}
-          />
-        )}
+        {selectedRoute && bogies.length > 0 && <BogieSelector bogies={bogies} activeBogieId={activeBogieId} onBogieChange={handleBogieChange} bogieStats={bogieStats} />}
+        {selectedRoute && activeBogieId && <SleeperSeatMap seats={seats} onSeatClick={handleSeatClick} selectedSeat={selectedSeat} bogieNumber={activeBogieId.toUpperCase()} />}
+        <BookingModal isOpen={isBookingModalOpen} onClose={handleCloseModal} seat={selectedSeat} onConfirmBooking={handleConfirmBooking} isLoading={isBookingLoading} />
 
-        {/* Seat Map */}
-        {selectedRoute && activeBogieId && (
-          <SleeperSeatMap
-            seats={seats}
-            onSeatClick={handleSeatClick}
-            selectedSeat={selectedSeat}
-            bogieNumber={activeBogieId.toUpperCase()}
-          />
-        )}
-
-        {/* Booking Modal */}
-        <BookingModal
-          isOpen={isBookingModalOpen}
-          onClose={handleCloseModal}
-          seat={selectedSeat}
-          onConfirmBooking={handleConfirmBooking}
-          isLoading={isBookingLoading}
-        />
-
-        {/* Instructions */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-800 mb-3">How to Book:</h3>
-          <ol className="list-decimal list-inside space-y-2 text-blue-700">
+        <div className={`mt-8 ${cardBg} p-6`}>
+          <h3 className="font-semibold text-accent mb-3">How to Book:</h3>
+          <ol className={`list-decimal list-inside space-y-2 ${subtext}`}>
             {routes.length > 1 && <li>Select your preferred route</li>}
             <li>Select your preferred bogie from available options</li>
             <li>Click on an available (green) seat</li>
             <li>Fill in your details in the booking form</li>
             <li>Confirm your booking</li>
           </ol>
-          <p className="mt-4 text-sm text-blue-600">
-            <strong>Note:</strong> Each person can book only one seat per route. Your email and phone number must be unique for each route.
+          <p className={`mt-4 text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+            <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Note:</strong> Each person can book only one seat per route.
           </p>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="container mx-auto px-4 py-6 text-center text-gray-600">
-          <p className="text-sm">
-            <strong>Powered by Take Your Seat</strong>
-          </p>
+      <footer className={`${footerBg} border-t mt-12`}>
+        <div className={`container mx-auto px-4 py-6 text-center ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          <p className="text-sm"><strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Powered by Take Your Seat</strong></p>
         </div>
       </footer>
 
-      <ToastContainer />
+      <ToastContainer theme={isDark ? 'dark' : 'light'} />
     </div>
   );
 };

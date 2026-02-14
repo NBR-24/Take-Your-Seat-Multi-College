@@ -3,8 +3,7 @@
     "colleges": {
       "$collegeId": {
         ".read": true,
-        ".write": true,
-        
+        ".write": "!data.exists()",
         "routes": {
           "$routeId": {
             "bogies": {
@@ -21,45 +20,11 @@
             }
           }
         },
-        
         "settings": {
           ".read": true,
-          ".write": true
+          ".write": "data.exists()"
         }
       }
-    },
-    
-    "return_bogies": {
-      ".read": true,
-      "$bogieId": {
-        ".write": "auth != null"
-      }
-    },
-    
-    "onward_bogies": {
-      ".read": true,
-      "$bogieId": {
-        ".write": "auth != null"
-      }
-    },
-    
-    "return_bookings": {
-      ".read": true,
-      "$bookingId": {
-        ".write": "!data.exists() || auth != null"
-      }
-    },
-    
-    "onward_bookings": {
-      ".read": true,
-      "$bookingId": {
-        ".write": "!data.exists() || auth != null"
-      }
-    },
-    
-    "test": {
-      ".read": true,
-      ".write": true
     }
   }
 }
