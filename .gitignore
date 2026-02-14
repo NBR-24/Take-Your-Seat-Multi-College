@@ -35,6 +35,7 @@ firestore-debug.log
 .env.test.local
 .env.production.local
 
+
 # Build files
 build/
 public/build/
