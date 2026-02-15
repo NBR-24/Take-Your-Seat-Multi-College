@@ -1,6 +1,8 @@
 import { ref, set, get, push, update } from 'firebase/database';
 import { db } from '../config/firebase';
 import { generateSleeperSeatLayout } from '../utils/seatLayout';
+import { generateAC2TierSeatLayout } from '../utils/ac2TierLayout';
+import { normalizeBogieData, getBogieSeatCount, BOGIE_TYPES } from '../utils/bogieTypes';
 
 // Hash password using SHA-256 (Web Crypto API — zero dependencies)
 const hashPassword = async (password) => {
@@ -56,7 +58,7 @@ export const generateUniqueCollegeCode = async () => {
 // Create a new college
 export const createCollege = async (collegeData) => {
   try {
-    const { name, bogies, seatsPerBogie, routes, adminPassword, logoUrl } = collegeData;
+    const { name, bogies, routes, adminPassword, logoUrl } = collegeData;
 
     // Generate unique college code
     const collegeCode = await generateUniqueCollegeCode();
@@ -74,7 +76,6 @@ export const createCollege = async (collegeData) => {
       updatedAt: Date.now(),
       settings: {
         bogies: bogies || [],
-        seatsPerBogie: seatsPerBogie || 80,
         routes: routes || []
       }
     };
@@ -85,8 +86,9 @@ export const createCollege = async (collegeData) => {
     // Initialize bogies for each route
     if (routes && routes.length > 0) {
       for (const route of routes) {
-        for (const bogieId of bogies) {
-          await initializeCollegeBogieData(collegeCode, route.id, bogieId, seatsPerBogie);
+        for (const bogie of bogies) {
+          const normalizedBogie = normalizeBogieData(bogie);
+          await initializeCollegeBogieData(collegeCode, route.id, normalizedBogie);
         }
       }
     }
@@ -100,34 +102,43 @@ export const createCollege = async (collegeData) => {
 };
 
 // Initialize bogie data for a college
-export const initializeCollegeBogieData = async (collegeId, routeId, bogieId, seatsPerBogie = 80) => {
+export const initializeCollegeBogieData = async (collegeId, routeId, bogieData) => {
   try {
+    const normalizedBogie = normalizeBogieData(bogieData);
+    const { id: bogieId, type: bogieType, name: bogieName } = normalizedBogie;
+    const seatCount = getBogieSeatCount(bogieType);
+
     const bogiePath = `colleges/${collegeId}/routes/${routeId}/bogies/${bogieId}`;
     const bogieRef = ref(db, bogiePath);
     const snapshot = await get(bogieRef);
 
     if (!snapshot.exists()) {
-      const seats = generateSleeperSeatLayout(seatsPerBogie);
-      const bogieData = {
+      // Generate seats based on bogie type
+      const seats = bogieType === BOGIE_TYPES.AC_2_TIER
+        ? generateAC2TierSeatLayout()
+        : generateSleeperSeatLayout(seatCount);
+
+      const bogieDataObj = {
         id: bogieId,
-        name: bogieId.toUpperCase(),
+        name: bogieName,
+        type: bogieType,
         seats: seats,
-        totalSeats: seatsPerBogie,
+        totalSeats: seatCount,
         bookedSeats: 0,
         reservedSeats: 0,
-        layoutVersion: 'sleeper_v3',
+        layoutVersion: bogieType === BOGIE_TYPES.AC_2_TIER ? 'ac2tier_v1' : 'sleeper_v3',
         createdAt: Date.now()
       };
 
-      await set(bogieRef, bogieData);
-      console.log(`✅ Initialized bogie ${bogieId} for college ${collegeId}, route ${routeId}`);
+      await set(bogieRef, bogieDataObj);
+      console.log(`✅ Initialized ${bogieType} bogie ${bogieId} for college ${collegeId}, route ${routeId}`);
       return seats;
     } else {
       console.log(`Bogie ${bogieId} already exists for college ${collegeId}, route ${routeId}`);
       return snapshot.val().seats;
     }
   } catch (error) {
-    console.error(`Error initializing bogie ${bogieId}:`, error);
+    console.error(`Error initializing bogie:`, error);
     throw error;
   }
 };

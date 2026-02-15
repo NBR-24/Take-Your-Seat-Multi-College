@@ -4,12 +4,14 @@ import { toast, ToastContainer } from 'react-toastify';
 import { Settings, ArrowLeft } from 'lucide-react';
 import BogieSelector from '../components/BogieSelector';
 import SleeperSeatMap from '../components/SleeperSeatMap';
+import AC2TierSeatMap from '../components/AC2TierSeatMap';
 import BookingModal from '../components/BookingModal';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import { subscribeToCollegeBogieData, bookCollegeSeat } from '../services/multiCollegeService';
 import { getCollegeByCode } from '../services/collegeService';
 import { SEAT_STATUS } from '../utils/seatLayout';
+import { normalizeBogieData, BOGIE_TYPES } from '../utils/bogieTypes';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CollegeBookingPage = () => {
@@ -56,12 +58,17 @@ const CollegeBookingPage = () => {
 
   useEffect(() => {
     if (!college || !selectedRoute) return;
-    const bogies = college.settings.bogies || [];
-    if (bogies.length === 0) return;
-    if (!activeBogieId && bogies.length > 0) setActiveBogieId(bogies[0]);
+    const rawBogies = college.settings.bogies || [];
+    if (rawBogies.length === 0) return;
+
+    // Normalize bogies and extract IDs
+    const normalizedBogies = rawBogies.map(b => normalizeBogieData(b));
+    const bogieIds = normalizedBogies.map(b => b.id);
+
+    if (!activeBogieId && bogieIds.length > 0) setActiveBogieId(bogieIds[0]);
 
     const unsubscribers = [];
-    bogies.forEach(bogieId => {
+    bogieIds.forEach(bogieId => {
       const unsubscribe = subscribeToCollegeBogieData(collegeId, selectedRoute.id, bogieId, (data) => {
         if (data) {
           setBogieData(prev => ({ ...prev, [bogieId]: data }));
@@ -80,8 +87,12 @@ const CollegeBookingPage = () => {
 
   const handleRouteChange = (route) => {
     setSelectedRoute(route);
-    if (college?.settings?.bogies?.length > 0) setActiveBogieId(college.settings.bogies[0]);
-    else setActiveBogieId(null);
+    if (college?.settings?.bogies?.length > 0) {
+      const firstBogie = normalizeBogieData(college.settings.bogies[0]);
+      setActiveBogieId(firstBogie.id);
+    } else {
+      setActiveBogieId(null);
+    }
     setBogieData({}); setBogieStats({}); setSelectedSeat(null);
   };
   const handleBogieChange = (bogieId) => { setActiveBogieId(bogieId); setSelectedSeat(null); };
@@ -133,8 +144,13 @@ const CollegeBookingPage = () => {
 
   const currentBogieData = bogieData[activeBogieId];
   const seats = currentBogieData?.seats || [];
-  const bogies = college?.settings?.bogies || [];
+  const rawBogies = college?.settings?.bogies || [];
+  const bogies = rawBogies.map(b => normalizeBogieData(b));
   const routes = college?.settings?.routes || [];
+
+  // Get current bogie type
+  const currentBogie = bogies.find(b => b.id === activeBogieId);
+  const currentBogieType = currentBogie?.type || BOGIE_TYPES.SLEEPER;
 
   return (
     <div className={`min-h-screen ${bg}`}>
@@ -193,7 +209,13 @@ const CollegeBookingPage = () => {
         )}
 
         {selectedRoute && bogies.length > 0 && <BogieSelector bogies={bogies} activeBogieId={activeBogieId} onBogieChange={handleBogieChange} bogieStats={bogieStats} />}
-        {selectedRoute && activeBogieId && <SleeperSeatMap seats={seats} onSeatClick={handleSeatClick} selectedSeat={selectedSeat} bogieNumber={activeBogieId.toUpperCase()} />}
+        {selectedRoute && activeBogieId && (
+          currentBogieType === BOGIE_TYPES.AC_2_TIER ? (
+            <AC2TierSeatMap seats={seats} onSeatClick={handleSeatClick} selectedSeat={selectedSeat} bogieNumber={activeBogieId.toUpperCase()} />
+          ) : (
+            <SleeperSeatMap seats={seats} onSeatClick={handleSeatClick} selectedSeat={selectedSeat} bogieNumber={activeBogieId.toUpperCase()} />
+          )
+        )}
         <BookingModal isOpen={isBookingModalOpen} onClose={handleCloseModal} seat={selectedSeat} onConfirmBooking={handleConfirmBooking} isLoading={isBookingLoading} />
 
         <div className={`mt-8 ${cardBg} p-6`}>

@@ -5,6 +5,7 @@ import { Plus, Trash2, ArrowLeft, Loader } from 'lucide-react';
 import { createCollege } from '../services/collegeService';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
+import { BOGIE_TYPES, getBogieTypeDisplay, BOGIE_TYPE_CONFIG } from '../utils/bogieTypes';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CollegeSetupPage = () => {
@@ -17,9 +18,12 @@ const CollegeSetupPage = () => {
     name: '',
     adminPassword: '',
     confirmPassword: '',
-    seatsPerBogie: 80,
     logoUrl: '',
-    bogies: ['s1', 's2', 's3'],
+    bogies: [
+      { id: 's1', type: BOGIE_TYPES.SLEEPER, name: 'S1' },
+      { id: 's2', type: BOGIE_TYPES.SLEEPER, name: 'S2' },
+      { id: 's3', type: BOGIE_TYPES.SLEEPER, name: 'S3' }
+    ],
     routes: [
       {
         id: 'route1',
@@ -34,6 +38,7 @@ const CollegeSetupPage = () => {
   });
 
   const [newBogie, setNewBogie] = useState('');
+  const [newBogieType, setNewBogieType] = useState(BOGIE_TYPES.SLEEPER);
   const [generatedCode, setGeneratedCode] = useState(null);
 
 
@@ -56,14 +61,20 @@ const CollegeSetupPage = () => {
   };
 
   const handleAddBogie = () => {
-    if (newBogie && !formData.bogies.includes(newBogie.toLowerCase())) {
-      setFormData(prev => ({ ...prev, bogies: [...prev.bogies, newBogie.toLowerCase()] }));
+    if (newBogie && !formData.bogies.some(b => b.id === newBogie.toLowerCase())) {
+      const newBogieObj = {
+        id: newBogie.toLowerCase(),
+        type: newBogieType,
+        name: newBogie.toUpperCase()
+      };
+      setFormData(prev => ({ ...prev, bogies: [...prev.bogies, newBogieObj] }));
       setNewBogie('');
+      setNewBogieType(BOGIE_TYPES.SLEEPER);
     }
   };
 
   const handleRemoveBogie = (bogieId) => {
-    setFormData(prev => ({ ...prev, bogies: prev.bogies.filter(b => b !== bogieId) }));
+    setFormData(prev => ({ ...prev, bogies: prev.bogies.filter(b => b.id !== bogieId) }));
   };
 
   const handleRouteChange = (index, field, value) => {
@@ -95,7 +106,6 @@ const CollegeSetupPage = () => {
 
   const validateStep2 = () => {
     if (formData.bogies.length === 0) { toast.error('Please add at least one bogie'); return false; }
-    if (formData.seatsPerBogie < 20 || formData.seatsPerBogie > 100) { toast.error('Seats per bogie must be between 20 and 100'); return false; }
     return true;
   };
 
@@ -194,21 +204,53 @@ const CollegeSetupPage = () => {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <label className={`block text-sm font-medium ${label} mb-2`}>Seats Per Bogie *</label>
-                <input type="number" name="seatsPerBogie" value={formData.seatsPerBogie} onChange={handleInputChange} min="20" max="100" className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`} />
-                <p className={`text-sm ${mutedText} mt-1`}>Recommended: 80 seats (standard sleeper coach)</p>
-              </div>
-              <div>
-                <label className={`block text-sm font-medium ${label} mb-2`}>Bogies *</label>
-                <div className="flex gap-2 mb-3">
-                  <input type="text" value={newBogie} onChange={(e) => setNewBogie(e.target.value.toLowerCase())} placeholder="e.g., s1, s2, s3" className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`} />
-                  <button onClick={handleAddBogie} className="px-6 py-3 bg-accent text-dark-700 font-semibold rounded-xl hover:bg-accent-light transition-all flex items-center gap-2"><Plus size={20} />Add</button>
+                <label className={`block text-sm font-medium ${label} mb-2`}>Add Bogies *</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                  <input
+                    type="text"
+                    value={newBogie}
+                    onChange={(e) => setNewBogie(e.target.value.toLowerCase())}
+                    placeholder="Bogie ID (e.g., s1, a1)"
+                    className={`px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`}
+                  />
+                  <select
+                    value={newBogieType}
+                    onChange={(e) => setNewBogieType(e.target.value)}
+                    className={`px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`}
+                  >
+                    {Object.entries(BOGIE_TYPE_CONFIG).map(([key, config]) => (
+                      <option key={key} value={key}>
+                        {config.name} ({config.seatCount} seats)
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleAddBogie}
+                    className="px-6 py-3 bg-accent text-dark-700 font-semibold rounded-xl hover:bg-accent-light transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus size={20} />Add
+                  </button>
                 </div>
+                <p className={`text-sm ${mutedText} mb-3`}>Choose bogie type: Sleeper (80 seats) or AC 2-Tier (48 seats)</p>
                 <div className="flex flex-wrap gap-2">
-                  {formData.bogies.map(bogieId => (
-                    <div key={bogieId} className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg">
-                      <span className="font-medium uppercase">{bogieId}</span>
-                      <button onClick={() => handleRemoveBogie(bogieId)} className="text-red-400 hover:text-red-300"><Trash2 size={16} /></button>
+                  {formData.bogies.map(bogie => (
+                    <div
+                      key={bogie.id}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 ${bogie.type === BOGIE_TYPES.AC_2_TIER
+                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                        : 'bg-accent/10 text-accent border-accent/20'
+                        }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-bold uppercase">{bogie.name}</span>
+                        <span className="text-xs opacity-75">{getBogieTypeDisplay(bogie.type, true)}</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveBogie(bogie.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>

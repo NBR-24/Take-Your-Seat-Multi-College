@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import CollegeSetupPage from './pages/CollegeSetupPage';
 import CollegeBookingPage from './pages/CollegeBookingPage';
 import CollegeAdminPage from './pages/CollegeAdminPage';
+import AC2TierDemo from './pages/AC2TierDemo';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="/setup" element={<CollegeSetupPage />} />
             <Route path="/college/:collegeId" element={<CollegeBookingPage />} />
             <Route path="/college/:collegeId/admin" element={<CollegeAdminPage />} />
+            <Route path="/ac2-demo" element={<AC2TierDemo />} />
           </Routes>
         </div>
       </CollegeProvider>

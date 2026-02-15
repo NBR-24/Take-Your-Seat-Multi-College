@@ -12,6 +12,7 @@ import {
 } from '../services/multiCollegeService';
 import { getCollegeByCode, verifyCollegeAdmin } from '../services/collegeService';
 import { SEAT_STATUS } from '../utils/seatLayout';
+import { normalizeBogieData } from '../utils/bogieTypes';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CollegeAdminPage = () => {
@@ -68,7 +69,10 @@ const CollegeAdminPage = () => {
       const data = await getCollegeByCode(collegeId);
       setCollege(data);
       if (data.settings?.routes?.length > 0) setSelectedRoute(data.settings.routes[0].id);
-      if (data.settings?.bogies?.length > 0) setSelectedBogie(data.settings.bogies[0]);
+      if (data.settings?.bogies?.length > 0) {
+        const firstBogie = normalizeBogieData(data.settings.bogies[0]);
+        setSelectedBogie(firstBogie.id);
+      }
     } catch (error) { toast.error('Failed to load college data'); }
     finally { setLoading(false); }
   };
@@ -95,7 +99,9 @@ const CollegeAdminPage = () => {
     if (!isAuthenticated || !college) return;
     const unsubscribers = [];
     const routes = college.settings?.routes || [];
-    const bogies = college.settings?.bogies || [];
+    const rawBogies = college.settings?.bogies || [];
+    const normalizedBogies = rawBogies.map(b => normalizeBogieData(b));
+    const bogieIds = normalizedBogies.map(b => b.id);
 
     if (selectedRoute && selectedRoute !== 'all') {
       unsubscribers.push(subscribeToCollegeBookings(collegeId, selectedRoute, (data) => setBookings(data)));
@@ -111,7 +117,7 @@ const CollegeAdminPage = () => {
     }
 
     routes.forEach(route => {
-      bogies.forEach(bogieId => {
+      bogieIds.forEach(bogieId => {
         unsubscribers.push(subscribeToCollegeBogieData(collegeId, route.id, bogieId, (data) => {
           if (data) setBogieData(prev => ({ ...prev, [`${route.id}_${bogieId}`]: data }));
         }));
@@ -214,7 +220,8 @@ const CollegeAdminPage = () => {
   const stats = getTotalStats();
   const filteredBookings = getFilteredBookings();
   const routes = college?.settings?.routes || [];
-  const bogies = college?.settings?.bogies || [];
+  const rawBogies = college?.settings?.bogies || [];
+  const bogies = rawBogies.map(b => normalizeBogieData(b));
 
   return (
     <div className={`min-h-screen ${bg}`}>
@@ -289,7 +296,7 @@ const CollegeAdminPage = () => {
                 </select>
                 <select value={selectedBogie} onChange={(e) => setSelectedBogie(e.target.value)} className={selectCls}>
                   <option value="all">All Bogies</option>
-                  {bogies.map(b => <option key={b} value={b}>{b.toUpperCase()}</option>)}
+                  {bogies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
                 <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-accent text-dark-700 font-semibold rounded-xl hover:bg-accent-light transition-all">
                   <Download size={20} />Export CSV
@@ -351,7 +358,7 @@ const CollegeAdminPage = () => {
                   {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
                 <select value={selectedBogie} onChange={(e) => setSelectedBogie(e.target.value)} className={selectCls}>
-                  {bogies.map(b => <option key={b} value={b}>{b.toUpperCase()}</option>)}
+                  {bogies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
 

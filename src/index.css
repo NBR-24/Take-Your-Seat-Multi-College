@@ -139,4 +139,29 @@
   .glass-card {
     @apply bg-dark-500/80 backdrop-blur-sm border border-dark-200 rounded-2xl;
   }
+
+  /* AC 2-Tier Berth Styles */
+  .ac2-berth {
+    @apply w-16 h-12 sm:w-20 sm:h-14 rounded-lg border-2 transition-all duration-200 text-sm font-semibold flex items-center justify-center cursor-pointer hover:scale-105 relative;
+  }
+
+  .ac2-berth-available {
+    @apply bg-blue-500/90 border-blue-400 text-white hover:bg-blue-500;
+  }
+
+  .ac2-berth-booked {
+    @apply bg-red-600 border-red-500 text-white cursor-not-allowed;
+  }
+
+  .ac2-berth-reserved {
+    @apply bg-yellow-600 border-yellow-500 text-white cursor-not-allowed;
+  }
+
+  .ac2-berth-unavailable {
+    @apply bg-dark-300 border-dark-200 text-gray-500 cursor-not-allowed;
+  }
+
+  .ac2-berth-selected {
+    @apply bg-accent border-accent text-dark-700 ring-2 ring-accent/50 animate-glow;
+  }
 }
