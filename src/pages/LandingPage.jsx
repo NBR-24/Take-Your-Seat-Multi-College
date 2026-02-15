@@ -93,7 +93,7 @@ const LandingPage = () => {
               : 'bg-accent text-dark-700 hover:bg-accent-light shadow-accent/20'
               }`}
           >
-            Get Started Create Your College
+            Get Started — Create Your College
             <ArrowRight size={24} />
           </button>
         </div>
