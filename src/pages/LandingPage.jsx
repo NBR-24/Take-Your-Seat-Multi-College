@@ -44,7 +44,7 @@ const LandingPage = () => {
         <div className="text-center max-w-4xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 text-accent text-sm font-medium px-4 py-2 rounded-full mb-8">
             <div className="w-2 h-2 bg-accent rounded-full animate-pulse"></div>
-            Now accepting registrations
+            Now Open for Registrations
           </div>
 
           <h1 className={`text-5xl sm:text-7xl font-bold ${heading} mb-6 tracking-tight`}>
