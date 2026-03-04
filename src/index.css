@@ -164,4 +164,25 @@
   .ac2-berth-selected {
     @apply bg-accent border-accent text-dark-700 ring-2 ring-accent/50 animate-glow;
   }
+
+  /* Landing Page Styles */
+  .landing-navbar {
+    @apply fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b transition-all duration-300;
+  }
+
+  .landing-card-hover {
+    @apply transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent via-emerald-400 to-teal-400;
+  }
+
+  .hero-shape {
+    @apply absolute rounded-full opacity-20 blur-3xl;
+  }
+
+  .step-connector {
+    @apply hidden md:block absolute top-6 left-[calc(50%+30px)] w-[calc(100%-60px)] h-0.5;
+  }
 }

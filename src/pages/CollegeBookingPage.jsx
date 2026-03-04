@@ -12,6 +12,7 @@ import { subscribeToCollegeBogieData, bookCollegeSeat } from '../services/multiC
 import { getCollegeByCode } from '../services/collegeService';
 import { SEAT_STATUS } from '../utils/seatLayout';
 import { normalizeBogieData, BOGIE_TYPES } from '../utils/bogieTypes';
+import { BookingPageSkeleton } from '../components/SkeletonLoaders';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CollegeBookingPage = () => {
@@ -119,14 +120,7 @@ const CollegeBookingPage = () => {
   const handleCloseModal = () => { if (!isBookingLoading) { setIsBookingModalOpen(false); setSelectedSeat(null); } };
 
   if (loading) {
-    return (
-      <div className={`min-h-screen ${bg} flex items-center justify-center`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent border-t-transparent mx-auto mb-4"></div>
-          <p className={subtext}>Loading college information...</p>
-        </div>
-      </div>
-    );
+    return <BookingPageSkeleton />;
   }
 
   if (error) {

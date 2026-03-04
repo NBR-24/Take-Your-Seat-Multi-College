@@ -47,3 +47,5 @@ public/build/
 # Documentation to ignore
 *.md
 !README.md
+.vercel
+.env*.local

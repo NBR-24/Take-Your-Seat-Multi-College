@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CollegeProvider } from './contexts/CollegeContext';
+import { BookingPageSkeleton, SetupPageSkeleton } from './components/SkeletonLoaders';
 import LandingPage from './pages/LandingPage';
-import CollegeSetupPage from './pages/CollegeSetupPage';
-import CollegeBookingPage from './pages/CollegeBookingPage';
-import CollegeAdminPage from './pages/CollegeAdminPage';
-import AC2TierDemo from './pages/AC2TierDemo';
+
+// Lazy load heavy pages
+const CollegeSetupPage = lazy(() => import('./pages/CollegeSetupPage'));
+const CollegeBookingPage = lazy(() => import('./pages/CollegeBookingPage'));
+const CollegeAdminPage = lazy(() => import('./pages/CollegeAdminPage'));
+const AC2TierDemo = lazy(() => import('./pages/AC2TierDemo'));
 
 function App() {
   return (
@@ -14,10 +17,26 @@ function App() {
         <div className="min-h-screen bg-gray-50">
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/setup" element={<CollegeSetupPage />} />
-            <Route path="/college/:collegeId" element={<CollegeBookingPage />} />
-            <Route path="/college/:collegeId/admin" element={<CollegeAdminPage />} />
-            <Route path="/ac2-demo" element={<AC2TierDemo />} />
+            <Route path="/setup" element={
+              <Suspense fallback={<SetupPageSkeleton />}>
+                <CollegeSetupPage />
+              </Suspense>
+            } />
+            <Route path="/college/:collegeId" element={
+              <Suspense fallback={<BookingPageSkeleton />}>
+                <CollegeBookingPage />
+              </Suspense>
+            } />
+            <Route path="/college/:collegeId/admin" element={
+              <Suspense fallback={<BookingPageSkeleton />}>
+                <CollegeAdminPage />
+              </Suspense>
+            } />
+            <Route path="/ac2-demo" element={
+              <Suspense fallback={<BookingPageSkeleton />}>
+                <AC2TierDemo />
+              </Suspense>
+            } />
           </Routes>
         </div>
       </CollegeProvider>

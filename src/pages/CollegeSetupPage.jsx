@@ -13,6 +13,7 @@ const CollegeSetupPage = () => {
   const { isDark } = useTheme();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [formData, setFormData] = useState({
     name: '',
@@ -58,6 +59,8 @@ const CollegeSetupPage = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error for this field when user types
+    setFieldErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleAddBogie = () => {
@@ -98,22 +101,32 @@ const CollegeSetupPage = () => {
   };
 
   const validateStep1 = () => {
-    if (!formData.name.trim()) { toast.error('Please enter college name'); return false; }
-    if (!formData.adminPassword || formData.adminPassword.length < 6) { toast.error('Admin password must be at least 6 characters'); return false; }
-    if (formData.adminPassword !== formData.confirmPassword) { toast.error('Passwords do not match'); return false; }
-    return true;
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Please enter college name';
+    if (!formData.adminPassword || formData.adminPassword.length < 6) errors.adminPassword = 'Password must be at least 6 characters';
+    if (formData.adminPassword !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const validateStep2 = () => {
-    if (formData.bogies.length === 0) { toast.error('Please add at least one bogie'); return false; }
+    if (formData.bogies.length === 0) {
+      setFieldErrors({ bogies: 'Please add at least one bogie' });
+      return false;
+    }
+    setFieldErrors({});
     return true;
   };
 
   const validateStep3 = () => {
-    for (const route of formData.routes) {
-      if (!route.name.trim() || !route.from.trim() || !route.to.trim()) { toast.error('Please fill all route details'); return false; }
-    }
-    return true;
+    const errors = {};
+    formData.routes.forEach((route, i) => {
+      if (!route.name.trim()) errors[`route_${i}_name`] = 'Route name is required';
+      if (!route.from.trim()) errors[`route_${i}_from`] = 'From is required';
+      if (!route.to.trim()) errors[`route_${i}_to`] = 'To is required';
+    });
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleNext = () => {
@@ -195,7 +208,8 @@ const CollegeSetupPage = () => {
               ].map(field => (
                 <div key={field.name}>
                   <label className={`block text-sm font-medium ${label} mb-2`}>{field.label}</label>
-                  <input type={field.type} name={field.name} value={formData[field.name]} onChange={handleInputChange} placeholder={field.placeholder} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`} />
+                  <input type={field.type} name={field.name} value={formData[field.name]} onChange={handleInputChange} placeholder={field.placeholder} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${fieldErrors[field.name] ? 'border-red-500' : ''} ${inputCls}`} />
+                  {fieldErrors[field.name] && <p className="text-red-500 text-sm mt-1">{fieldErrors[field.name]}</p>}
                 </div>
               ))}
             </div>
@@ -232,6 +246,7 @@ const CollegeSetupPage = () => {
                   </button>
                 </div>
                 <p className={`text-sm ${mutedText} mb-3`}>Choose bogie type: Sleeper (80 seats) or AC 2-Tier (48 seats)</p>
+                {fieldErrors.bogies && <p className="text-red-500 text-sm mb-3">{fieldErrors.bogies}</p>}
                 <div className="flex flex-wrap gap-2">
                   {formData.bogies.map(bogie => (
                     <div
@@ -275,12 +290,14 @@ const CollegeSetupPage = () => {
                     ].map(f => (
                       <div key={f.field}>
                         <label className={`block text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-1`}>{f.label}</label>
-                        <input type="text" value={route[f.field]} onChange={(e) => handleRouteChange(index, f.field, e.target.value)} placeholder={f.placeholder} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`} />
+                        <input type="text" value={route[f.field]} onChange={(e) => { handleRouteChange(index, f.field, e.target.value); setFieldErrors(prev => ({ ...prev, [`route_${index}_${f.field}`]: '' })); }} placeholder={f.placeholder} className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${fieldErrors[`route_${index}_${f.field}`] ? 'border-red-500' : ''} ${inputCls}`} />
+                        {fieldErrors[`route_${index}_${f.field}`] && <p className="text-red-500 text-sm mt-1">{fieldErrors[`route_${index}_${f.field}`]}</p>}
                       </div>
                     ))}
                     <div className="md:col-span-2">
                       <label className={`block text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-1`}>To *</label>
-                      <input type="text" value={route.to} onChange={(e) => handleRouteChange(index, 'to', e.target.value)} placeholder="e.g., Agra" className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${inputCls}`} />
+                      <input type="text" value={route.to} onChange={(e) => { handleRouteChange(index, 'to', e.target.value); setFieldErrors(prev => ({ ...prev, [`route_${index}_to`]: '' })); }} placeholder="e.g., Agra" className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${fieldErrors[`route_${index}_to`] ? 'border-red-500' : ''} ${inputCls}`} />
+                      {fieldErrors[`route_${index}_to`] && <p className="text-red-500 text-sm mt-1">{fieldErrors[`route_${index}_to`]}</p>}
                     </div>
                   </div>
                 </div>
