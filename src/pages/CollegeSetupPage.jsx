@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { Plus, Trash2, ArrowLeft, Loader } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader, Copy, Check } from 'lucide-react';
 import { createCollege } from '../services/collegeService';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
@@ -14,6 +14,7 @@ const CollegeSetupPage = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [copied, setCopied] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -163,9 +164,30 @@ const CollegeSetupPage = () => {
           </div>
           <h2 className={`text-3xl font-bold ${heading} mb-4`}>College Created Successfully!</h2>
           <p className={`${subtext} mb-8`}>Your college has been set up. Share this code with your students:</p>
-          <div className="bg-accent/10 border-2 border-accent/30 rounded-xl p-8 mb-8">
+          <div className="bg-accent/10 border-2 border-accent/30 rounded-xl p-8 mb-8 relative">
             <p className={`text-sm ${subtext} mb-2`}>College Code</p>
-            <p className="text-5xl font-bold text-accent tracking-wider">{generatedCode}</p>
+            <div className="flex items-center justify-center gap-4">
+              <p className="text-5xl font-bold text-accent tracking-wider">{generatedCode}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedCode);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className={`p-3 rounded-xl transition-all duration-300 ${copied
+                    ? 'bg-accent text-dark-700 scale-110'
+                    : isDark
+                      ? 'bg-dark-400 text-gray-300 hover:bg-accent/20 hover:text-accent'
+                      : 'bg-gray-100 text-gray-600 hover:bg-accent/20 hover:text-accent'
+                  }`}
+                title={copied ? 'Copied!' : 'Copy code'}
+              >
+                {copied ? <Check size={22} strokeWidth={3} /> : <Copy size={22} />}
+              </button>
+            </div>
+            {copied && (
+              <p className="text-accent text-sm font-medium mt-3 animate-pulse">Copied to clipboard!</p>
+            )}
           </div>
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-8">
             <p className="text-sm text-yellow-500"><strong>Important:</strong> Save this code! Students will need it to access the booking system.</p>

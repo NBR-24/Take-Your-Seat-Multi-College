@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { Settings, ArrowLeft } from 'lucide-react';
+import { Settings, ArrowLeft, Train, ArrowRight } from 'lucide-react';
 import BogieSelector from '../components/BogieSelector';
 import SleeperSeatMap from '../components/SleeperSeatMap';
 import AC2TierSeatMap from '../components/AC2TierSeatMap';
@@ -189,13 +189,28 @@ const CollegeBookingPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {routes.map(route => (
                 <button key={route.id} onClick={() => handleRouteChange(route)}
-                  className={`p-4 rounded-xl border-2 transition-all ${selectedRoute?.id === route.id
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${selectedRoute?.id === route.id
                     ? 'border-accent bg-accent/10'
                     : isDark ? 'border-dark-200 hover:border-accent/30 bg-dark-500' : 'border-gray-200 hover:border-accent/30 bg-white'
                     }`}>
-                  <h3 className={`font-semibold ${heading}`}>{route.name}</h3>
-                  <p className={`text-sm ${subtext}`}>{route.from} → {route.to}</p>
-                  {route.trainNumber && <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>{route.trainNumber} - {route.trainName}</p>}
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${selectedRoute?.id === route.id ? 'bg-accent/20' : isDark ? 'bg-dark-400' : 'bg-gray-100'}`}>
+                      <Train className={`${selectedRoute?.id === route.id ? 'text-accent' : isDark ? 'text-gray-400' : 'text-gray-500'}`} size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold ${heading}`}>{route.name}</h3>
+                      <div className={`flex items-center gap-2 text-sm mt-1 ${subtext}`}>
+                        <span className="truncate">{route.from}</span>
+                        <ArrowRight size={14} className="text-accent flex-shrink-0" />
+                        <span className="truncate">{route.to}</span>
+                      </div>
+                      {route.trainNumber && (
+                        <span className={`inline-block text-xs mt-2 px-2 py-0.5 rounded-full ${isDark ? 'bg-dark-400 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                          🚂 {route.trainNumber}{route.trainName ? ` — ${route.trainName}` : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
