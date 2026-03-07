@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { LogOut, Users, Train, Download, Search, Trash2, ArrowLeft, Eye, EyeOff, Settings as SettingsIcon } from 'lucide-react';
+import { LogOut, Users, Train, Download, Search, Trash2, ArrowLeft, Eye, EyeOff, Settings as SettingsIcon, Lock, Clock, Ban, ChevronDown } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -247,11 +247,11 @@ const CollegeAdminPage = () => {
           {[
             { icon: <Users className="text-accent" size={24} />, label: 'Total Bookings', value: stats.totalBookings, bg: 'bg-accent/10' },
             { icon: <Train className="text-green-400" size={24} />, label: 'Available', value: stats.availableSeats, bg: 'bg-green-500/10' },
-            { icon: <div className="w-6 h-6 bg-red-500 rounded"></div>, label: 'Booked', value: stats.bookedSeats, bg: 'bg-red-500/10' },
-            { icon: <div className="w-6 h-6 bg-yellow-500 rounded"></div>, label: 'Reserved', value: stats.reservedSeats, bg: 'bg-yellow-500/10' },
-            { icon: <div className="w-6 h-6 bg-gray-500 rounded"></div>, label: 'Unavailable', value: stats.unavailableSeats, bg: 'bg-gray-500/10' },
+            { icon: <Lock className="text-red-500" size={24} />, label: 'Booked', value: stats.bookedSeats, bg: 'bg-red-500/10' },
+            { icon: <Clock className="text-yellow-500" size={24} />, label: 'Reserved', value: stats.reservedSeats, bg: 'bg-yellow-500/10' },
+            { icon: <Ban className="text-gray-500" size={24} />, label: 'Unavailable', value: stats.unavailableSeats, bg: 'bg-gray-500/10' },
           ].map(stat => (
-            <div key={stat.label} className={cardBg + ' p-5'}>
+            <div key={stat.label} className={`${cardBg} p-5 hover:-translate-y-1 hover:shadow-lg transition-all duration-300`}>
               <div className="flex items-center">
                 <div className={`${stat.bg} p-3 rounded-xl`}>{stat.icon}</div>
                 <div className="ml-4">
@@ -290,14 +290,20 @@ const CollegeAdminPage = () => {
                   <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                     className={`w-full pl-10 pr-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent ${inputCls}`} />
                 </div>
-                <select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className={selectCls}>
-                  <option value="all">All Routes</option>
-                  {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-                <select value={selectedBogie} onChange={(e) => setSelectedBogie(e.target.value)} className={selectCls}>
-                  <option value="all">All Bogies</option>
-                  {bogies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
+                <div className="relative">
+                  <ChevronDown size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className={`appearance-none !pl-10 pr-4 ${selectCls}`}>
+                    <option value="all">All Routes</option>
+                    {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div className="relative">
+                  <ChevronDown size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <select value={selectedBogie} onChange={(e) => setSelectedBogie(e.target.value)} className={`appearance-none !pl-10 pr-4 ${selectCls}`}>
+                    <option value="all">All Bogies</option>
+                    {bogies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
                 <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-accent text-dark-700 font-semibold rounded-xl hover:bg-accent-light transition-all">
                   <Download size={20} />Export CSV
                 </button>
@@ -354,12 +360,18 @@ const CollegeAdminPage = () => {
             <div className="p-6">
               <h2 className={`text-xl font-bold ${heading} mb-6`}>Seat Management</h2>
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className={selectCls}>
-                  {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-                <select value={selectedBogie} onChange={(e) => setSelectedBogie(e.target.value)} className={selectCls}>
-                  {bogies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
+                <div className="relative">
+                  <ChevronDown size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <select value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className={`appearance-none !pl-10 pr-4 ${selectCls}`}>
+                    {routes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                </div>
+                <div className="relative">
+                  <ChevronDown size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
+                  <select value={selectedBogie} onChange={(e) => setSelectedBogie(e.target.value)} className={`appearance-none !pl-10 pr-4 ${selectCls}`}>
+                    {bogies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div className={`flex flex-wrap gap-4 mb-6 p-4 rounded-xl border ${isDark ? 'bg-dark-400/50 border-dark-200' : 'bg-gray-50 border-gray-200'}`}>
