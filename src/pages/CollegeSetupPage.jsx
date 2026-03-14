@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { Plus, Trash2, ArrowLeft, Loader, Copy, Check } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Loader, Copy, Check, Train, AlertTriangle } from 'lucide-react';
 import { createCollege } from '../services/collegeService';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
@@ -158,41 +158,47 @@ const CollegeSetupPage = () => {
     return (
       <div className={`min-h-screen ${bg} flex items-center justify-center p-4`}>
         <div className="absolute top-4 right-4 z-50"><ThemeToggle /></div>
-        <div className={`${cardBg} p-12 max-w-2xl w-full text-center`}>
-          <div className="bg-accent/20 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
-            <span className="text-4xl">🎉</span>
+        {/* Updated Container to match the new screenshots exactly */}
+        <div className={`${isDark ? 'bg-[#1C1C1E] border border-[#2C2C2E]' : 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]'} rounded-[20px] p-8 sm:p-12 max-w-2xl w-full text-center relative transition-all duration-300`}>
+
+          {/* Central Circular Icon */}
+          <div className="bg-[#EAF6ED] rounded-full w-[72px] h-[72px] flex items-center justify-center mx-auto mb-6">
+            <Train className="w-8 h-8 text-[#62D283]" strokeWidth={2.5} />
           </div>
-          <h2 className={`text-3xl font-bold ${heading} mb-4`}>College Created Successfully!</h2>
-          <p className={`${subtext} mb-8`}>Your college has been set up. Share this code with your students:</p>
-          <div className="bg-accent/10 border-2 border-accent/30 rounded-xl p-8 mb-8 relative">
-            <p className={`text-sm ${subtext} mb-2`}>College Code</p>
-            <div className="flex items-center justify-center gap-4">
-              <p className="text-5xl font-bold text-accent tracking-wider">{generatedCode}</p>
+
+          <h2 className={`text-[28px] font-bold ${isDark ? 'text-white' : 'text-[#1A1A1A]'} mb-2 tracking-tight`}>College Created Successfully!</h2>
+          <p className={`${isDark ? 'text-[#A1A1AA]' : 'text-[#71717A]'} mb-8 text-[15px]`}>Your college has been set up. Share this code with your students:</p>
+
+          {/* Inner Code Box */}
+          <div className={`${isDark ? 'bg-[#2C2C2E]' : 'bg-[#3A3D40]'} rounded-xl p-8 mb-6 relative`}>
+            <p className={`text-[13px] text-gray-400 mb-2 font-medium`}>College Code</p>
+            <div className="flex items-center justify-center gap-3">
+              <p className="text-[42px] font-bold text-[#62D283] tracking-widest">{generatedCode}</p>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(generatedCode);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className={`p-3 rounded-xl transition-all duration-300 ${copied
-                    ? 'bg-accent text-dark-700 scale-110'
-                    : isDark
-                      ? 'bg-dark-400 text-gray-300 hover:bg-accent/20 hover:text-accent'
-                      : 'bg-gray-100 text-gray-600 hover:bg-accent/20 hover:text-accent'
+                className={`p-2.5 rounded-lg transition-all duration-300 relative ${copied
+                  ? 'bg-[#62D283]/20 text-[#62D283] scale-110'
+                  : 'bg-black/20 text-gray-400 hover:text-white hover:bg-black/40'
                   }`}
                 title={copied ? 'Copied!' : 'Copy code'}
               >
-                {copied ? <Check size={22} strokeWidth={3} /> : <Copy size={22} />}
+                {copied ? <Check size={20} strokeWidth={3} /> : <Copy size={20} />}
               </button>
             </div>
-            {copied && (
-              <p className="text-accent text-sm font-medium mt-3 animate-pulse">Copied to clipboard!</p>
-            )}
           </div>
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-8">
-            <p className="text-sm text-yellow-500"><strong>Important:</strong> Save this code! Students will need it to access the booking system.</p>
+
+          {/* Warning Box */}
+          <div className="message-box-warning mb-8 items-center justify-center text-center mx-auto">
+            <AlertTriangle className="w-[18px] h-[18px] shrink-0" />
+            <p><strong className="font-semibold">Important:</strong> Save this code! Students will need it to access the booking system.</p>
           </div>
-          <button onClick={() => navigate(`/college/${generatedCode}`)} className="w-full px-8 py-4 bg-accent text-dark-700 font-bold rounded-xl hover:bg-accent-light transition-all">Go to Booking Page</button>
+
+          {/* Primary Action Button */}
+          <button onClick={() => navigate(`/college/${generatedCode}`)} className="w-full h-14 bg-[#62D283] text-[#1A1A1A] font-bold text-[15px] rounded-xl hover:bg-[#52C071] transition-all">Go to Booking Page</button>
         </div>
         <ToastContainer theme={isDark ? 'dark' : 'light'} />
       </div>

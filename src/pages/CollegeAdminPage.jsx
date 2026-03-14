@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { LogOut, Users, Train, Download, Search, Trash2, ArrowLeft, Eye, EyeOff, Settings as SettingsIcon, Lock, Clock, Ban, ChevronDown } from 'lucide-react';
+import { LogOut, Users, Train, Download, Search, Trash2, ArrowLeft, Eye, EyeOff, Settings as SettingsIcon, Lock, Clock, Ban, ChevronDown, Info } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -177,30 +177,37 @@ const CollegeAdminPage = () => {
     return (
       <div className={`min-h-screen ${bg} flex items-center justify-center p-4`}>
         <div className="absolute top-4 right-4 z-50"><ThemeToggle /></div>
-        <div className={`${cardBg} p-8 max-w-md w-full`}>
-          <div className="text-center mb-8">
-            <div className="bg-accent/20 text-accent rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">🔐</div>
-            <h2 className={`text-2xl font-bold ${heading} mb-2`}>Admin Login</h2>
-            <p className={subtext}>Enter admin password to continue</p>
+
+        {/* Updated Container for both Light and Dark modes to match screenshot */}
+        <div className={`${isDark ? 'bg-dark-500/80 backdrop-blur-md border-[user_rules.md,c:\Users\Navami\Take-Your-Seat-Multi-College\src\components\ThemeToggle.jsx]der-dark-200 shadow-[0_0_30px_rgba(0,0,0,0.5)]' : 'bg-[#3A3D40] shadow-[0_15px_50px_rgba(0,0,0,0.15)] border border-[#2A2D30]'} rounded-xl p-8 max-w-md w-full relative overflow-hidden transition-all duration-300`}>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50"></div>
+
+          <div className="text-center mb-8 relative z-10">
+            <div className={`bg-accent/10 border border-accent/20 text-accent rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(0,212,126,0.15)]`}>🔐</div>
+            <h2 className={`text-2xl font-bold ${isDark ? heading : 'text-white'} mb-2`}>Admin Login</h2>
+            <p className={`${isDark ? subtext : 'text-gray-400'}`}>Enter admin password to continue</p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
+
+          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
             <div>
-              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Password</label>
+              <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-400'} mb-2`}>Password</label>
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setLoginError(''); }}
-                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent pr-12 ${loginError ? 'border-red-500' : ''} ${inputCls}`} placeholder="Enter admin password" />
+                  className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent pr-12 ${loginError ? 'border-red-500' : ''} ${isDark ? inputCls : 'bg-white border-transparent text-gray-900 placeholder-gray-400 shadow-inner'}`} placeholder="Enter admin password" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
               {loginError && <p className="text-red-500 text-sm font-medium mt-2">{loginError}</p>}
             </div>
-            <button type="submit" className="w-full px-6 py-3 bg-accent text-dark-700 font-bold rounded-xl hover:bg-accent-light transition-all">Login</button>
-            <button type="button" onClick={() => navigate(`/college/${collegeId}`)} className={`w-full px-6 py-3 border rounded-xl transition-all flex items-center justify-center gap-2 ${secondaryBtn}`}>
+
+            <button type="submit" className="w-full px-6 py-3 bg-accent text-dark-700 font-bold rounded-xl hover:bg-[#1ebf5b] transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5">Login</button>
+            <button type="button" onClick={() => navigate(`/college/${collegeId}`)} className={`w-full px-6 py-3 border rounded-xl transition-all flex items-center justify-center gap-2 ${isDark ? secondaryBtn : 'border-gray-500 text-gray-400 hover:bg-white/5 hover:text-white'}`}>
               <ArrowLeft size={20} />Back to Booking Page
             </button>
           </form>
         </div>
+
         <ToastContainer theme={isDark ? 'dark' : 'light'} />
       </div>
     );
@@ -413,13 +420,16 @@ const CollegeAdminPage = () => {
                 <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Select a specific route and bogie.</div>
               )}
 
-              <div className="mt-6 p-4 bg-accent/5 border border-accent/20 rounded-xl">
-                <h3 className="font-semibold text-accent mb-2">How to Manage Seats:</h3>
-                <ul className={`list-disc list-inside space-y-1 text-sm ${subtext}`}>
-                  <li>Click a seat to cycle: Available → Reserved → Unavailable → Available</li>
-                  <li>Booked seats cannot be changed (cancel the booking first)</li>
-                  <li>Reserved seats are for faculty or special allocations</li>
-                </ul>
+              <div className="mt-6 message-box-info items-start">
+                <Info className="w-5 h-5 mt-0.5 shrink-0" />
+                <div>
+                  <h3 className="font-semibold mb-2">How to Manage Seats:</h3>
+                  <ul className="list-disc list-inside space-y-1 text-sm opacity-90">
+                    <li>Click a seat to cycle: Available → Reserved → Unavailable → Available</li>
+                    <li>Booked seats cannot be changed (cancel the booking first)</li>
+                    <li>Reserved seats are for faculty or special allocations</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

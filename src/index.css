@@ -185,4 +185,68 @@
   .step-connector {
     @apply hidden md:block absolute top-6 left-[calc(50%+30px)] w-[calc(100%-60px)] h-0.5;
   }
+
+  /* Custom Toastify Styles for Vercel/Modern Dark Aesthetic */
+  .Toastify__toast-theme--dark,
+  .Toastify__toast-theme--light {
+    @apply bg-[#1C1C1E] border border-[#2C2C2E] shadow-2xl rounded-xl text-gray-200;
+    font-family: inherit;
+  }
+
+  .Toastify__toast--success {
+    @apply border-accent/30;
+  }
+
+  .Toastify__toast--success .Toastify__toast-icon svg {
+    @apply fill-accent;
+  }
+
+  .Toastify__progress-bar--success {
+    @apply bg-accent;
+  }
+
+  .Toastify__toast--error {
+    @apply border-red-500/30;
+  }
+
+  .Toastify__toast--error .Toastify__toast-icon svg {
+    @apply fill-red-500;
+  }
+
+  .Toastify__progress-bar--error {
+    @apply bg-red-500;
+  }
+
+  .Toastify__toast--warning {
+    @apply border-yellow-500/30;
+  }
+
+  .Toastify__toast--warning .Toastify__toast-icon svg {
+    @apply fill-yellow-500;
+  }
+
+  .Toastify__progress-bar--warning {
+    @apply bg-yellow-500;
+  }
+
+  /* Shared Message Box Styles */
+  .message-box {
+    @apply p-4 rounded-xl border border-solid flex items-center gap-3 transition-all duration-300 text-[13.5px] font-medium;
+  }
+
+  .message-box-success {
+    @apply message-box bg-[#EAF6ED] border-[#C3E8CC] text-[#256A38] dark:bg-transparent dark:border-[#2C4A33] dark:text-[#62D283];
+  }
+
+  .message-box-warning {
+    @apply message-box bg-[#FFF9E6] border-[#F5E6B8] text-[#9A7D32] dark:bg-transparent dark:border-[#4A4022] dark:text-[#EAB308];
+  }
+
+  .message-box-error {
+    @apply message-box bg-[#FFF5F5] border-[#FFE1E1] text-[#C53030] dark:bg-transparent dark:border-[#4A2626] dark:text-[#FC8181];
+  }
+
+  .message-box-info {
+    @apply message-box bg-[#F0F9FF] border-[#E0F2FE] text-[#0369A1] dark:bg-transparent dark:border-[#1E3A5F] dark:text-[#38BDF8];
+  }
 }

@@ -203,7 +203,7 @@ const LandingPage = () => {
   const howItWorksRef = useRef(null);
 
 
-  const typedWord = useTypewriter(['Seat', 'Trip', 'Ride', 'Seat'], 130, 90, 1800);
+  const typedWord = useTypewriter(['Seat', 'Trip', 'Ride', 'Tour'], 130, 90, 1800);
 
   const isCodeComplete = collegeCode.trim().length === 6;
 
@@ -495,7 +495,7 @@ const LandingPage = () => {
                     : 'bg-gray-900 text-white hover:bg-gray-800 shadow-lg shadow-gray-900/20'
                     }`}
                 >
-                  Get Started — Create Your College
+                  Create Your College
                   <ArrowRight size={22} />
                 </GlowButton>
               </div>

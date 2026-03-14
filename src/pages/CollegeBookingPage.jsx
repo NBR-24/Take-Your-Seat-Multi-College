@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { Settings, ArrowLeft, Train, ArrowRight } from 'lucide-react';
+import { Settings, ArrowLeft, Train, ArrowRight, AlertCircle } from 'lucide-react';
 import BogieSelector from '../components/BogieSelector';
 import SleeperSeatMap from '../components/SleeperSeatMap';
 import AC2TierSeatMap from '../components/AC2TierSeatMap';
@@ -127,7 +127,9 @@ const CollegeBookingPage = () => {
     return (
       <div className={`min-h-screen ${bg} flex items-center justify-center p-4`}>
         <div className="text-center max-w-md">
-          <div className="bg-red-500/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4"><span className="text-3xl">❌</span></div>
+          <div className={`${isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-[#FFF5F5] border border-[#FFE1E1]'} rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6 shadow-sm`}>
+            <AlertCircle className={`w-8 h-8 ${isDark ? 'text-[#FC8181]' : 'text-[#C53030]'}`} strokeWidth={2.5} />
+          </div>
           <h2 className={`text-2xl font-bold ${heading} mb-2`}>College Not Found</h2>
           <p className={`${subtext} mb-6`}>{error}</p>
           <button onClick={() => navigate('/')} className="px-6 py-3 bg-accent text-dark-700 font-bold rounded-xl hover:bg-accent-light transition-all flex items-center gap-2 mx-auto"><ArrowLeft size={20} />Back to Home</button>
@@ -227,18 +229,21 @@ const CollegeBookingPage = () => {
         )}
         <BookingModal isOpen={isBookingModalOpen} onClose={handleCloseModal} seat={selectedSeat} onConfirmBooking={handleConfirmBooking} isLoading={isBookingLoading} />
 
-        <div className={`mt-8 ${cardBg} p-6`}>
-          <h3 className="font-semibold text-accent mb-3">How to Book:</h3>
-          <ol className={`list-decimal list-inside space-y-2 ${subtext}`}>
-            {routes.length > 1 && <li>Select your preferred route</li>}
-            <li>Select your preferred bogie from available options</li>
-            <li>Click on an available (green) seat</li>
-            <li>Fill in your details in the booking form</li>
-            <li>Confirm your booking</li>
-          </ol>
-          <p className={`mt-4 text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            <strong className={isDark ? 'text-gray-300' : 'text-gray-700'}>Note:</strong> Each person can book only one seat per route.
-          </p>
+        <div className="mt-8 message-box-info items-start">
+          <Info className="w-5 h-5 mt-0.5 shrink-0" />
+          <div>
+            <h3 className="font-semibold mb-3">How to Book:</h3>
+            <ol className="list-decimal list-inside space-y-2 opacity-90">
+              {routes.length > 1 && <li>Select your preferred route</li>}
+              <li>Select your preferred bogie from available options</li>
+              <li>Click on an available (green) seat</li>
+              <li>Fill in your details in the booking form</li>
+              <li>Confirm your booking</li>
+            </ol>
+            <p className="mt-4 text-sm opacity-75">
+              <strong>Note:</strong> Each person can book only one seat per route.
+            </p>
+          </div>
         </div>
       </div>
 
