@@ -34,7 +34,7 @@ Seats are visually distinguished for clarity:
 - **Frontend:** React + Vite  
 - **Styling:** TailwindCSS  
 - **Database:** Firebase Firestore  
-- **Hosting:** Firebase Hosting  
+  
 
 ---
 
