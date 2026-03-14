@@ -5,7 +5,7 @@ import { getCollegeByCode } from '../services/collegeService';
 import ThemeToggle from '../components/ThemeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 
-// ===== Custom Intersection Observer Hook =====
+
 const useInView = (options = {}) => {
   const ref = useRef(null);
   const [isInView, setIsInView] = useState(false);
@@ -124,7 +124,7 @@ const GlowButton = ({ children, className = '', onClick, type = 'button' }) => {
   );
 };
 
-// ===== Lazy-loaded Sections =====
+
 const FeaturesSection = React.memo(({ isDark }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
     {[
@@ -178,7 +178,7 @@ const HowItWorksSection = React.memo(({ isDark }) => (
   </div>
 ));
 
-// ===== Lazy Section Loader (renders only when scrolled into view) =====
+
 const LazySection = ({ children, className = '' }) => {
   const [ref, isInView] = useInView({ threshold: 0.05 });
 
@@ -189,7 +189,7 @@ const LazySection = ({ children, className = '' }) => {
   );
 };
 
-// ===== Main Component =====
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const [collegeCode, setCollegeCode] = useState('');
@@ -202,12 +202,12 @@ const LandingPage = () => {
   const featuresRef = useRef(null);
   const howItWorksRef = useRef(null);
 
-  // Typewriter effect
-  const typedWord = useTypewriter(['Seat', 'Trip', 'Journey', 'Ride', 'Seat'], 130, 90, 1800);
+
+  const typedWord = useTypewriter(['Seat', 'Trip', 'Ride', 'Seat'], 130, 90, 1800);
 
   const isCodeComplete = collegeCode.trim().length === 6;
 
-  // Async college code validation
+
   useEffect(() => {
     if (!isCodeComplete) {
       setCodeStatus('idle');
@@ -435,8 +435,8 @@ const LandingPage = () => {
                         placeholder="Enter 6-digit college code"
                         maxLength={6}
                         className={`w-full px-5 py-4 text-lg rounded-xl border-2 focus:outline-none focus:ring-2 uppercase tracking-widest transition-all pr-14 ${error || codeStatus === 'invalid' ? 'border-red-500 focus:ring-red-500/50 focus:border-red-500'
-                            : codeStatus === 'valid' ? 'border-accent focus:ring-accent/50 focus:border-accent'
-                              : 'focus:ring-accent/50 focus:border-accent'
+                          : codeStatus === 'valid' ? 'border-accent focus:ring-accent/50 focus:border-accent'
+                            : 'focus:ring-accent/50 focus:border-accent'
                           } ${isDark
                             ? 'bg-dark-400/80 border-white/10 text-white placeholder-gray-600'
                             : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
@@ -487,7 +487,7 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                {/* ===== GET STARTED GLOW BUTTON ===== */}
+
                 <GlowButton
                   onClick={handleGetStarted}
                   className={`w-full px-8 py-4 text-lg font-bold rounded-xl transition-all transform hover:scale-[1.02] active:scale-100 ${isDark
@@ -503,14 +503,14 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* ===== FEATURES SECTION — Lazy loaded ===== */}
+
         <LazySection>
           <section ref={featuresRef} className="max-w-7xl mx-auto px-6 py-20">
             <FeaturesSection isDark={isDark} />
           </section>
         </LazySection>
 
-        {/* ===== HOW IT WORKS SECTION — Lazy loaded ===== */}
+
         <LazySection>
           <AnimatedSection>
             <section ref={howItWorksRef} className="max-w-7xl mx-auto px-6 py-20">
