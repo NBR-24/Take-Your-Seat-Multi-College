@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
-import { Settings, ArrowLeft, Train, ArrowRight, AlertCircle } from 'lucide-react';
+import { Settings, ArrowLeft, Train, ArrowRight, AlertCircle, Info } from 'lucide-react';
 import BogieSelector from '../components/BogieSelector';
 import SleeperSeatMap from '../components/SleeperSeatMap';
 import AC2TierSeatMap from '../components/AC2TierSeatMap';
