@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CollegeProvider } from './contexts/CollegeContext';
 import { BookingPageSkeleton, SetupPageSkeleton } from './components/SkeletonLoaders';
 import LandingPage from './pages/LandingPage';
+import { Analytics } from '@vercel/analytics/react';
 
 // Lazy load heavy pages
 const CollegeSetupPage = lazy(() => import('./pages/CollegeSetupPage'));
@@ -40,6 +41,7 @@ function App() {
           </Routes>
         </div>
       </CollegeProvider>
+      <Analytics />
     </Router>
   );
 }
